@@ -63,9 +63,22 @@ message Collector {
   int32 offline_miss_rounds = 9;
   // 连续 N 轮出现在新位置才确认漂移
   int32 move_confirm_rounds = 10;
+  // SNMP Trap 监听地址(如 0.0.0.0:1162); 为空关闭 Trap 增量采集
+  string trap_addr = 11;
+  // Trap 触发单设备增量重扫的防抖窗口(默认 15s)
+  google.protobuf.Duration trap_debounce = 12;
 }
 
 message Security {
   // 凭据加密主密钥,生产环境请通过环境变量注入,勿提交到仓库
   string secret_key = 1;
+  // 是否开启登录鉴权与 RBAC(默认 false 方便内网快速体验,生产建议 true)
+  bool auth_enabled = 2;
+  // JWT 签名密钥(为空时复用 secret_key)
+  string jwt_secret = 3;
+  // JWT 有效期(默认 24h)
+  google.protobuf.Duration jwt_ttl = 4;
+  // 首次启动且用户表为空时自动创建的管理员账号与初始密码
+  string init_admin_user = 5;
+  string init_admin_password = 6;
 }

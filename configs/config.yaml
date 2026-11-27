@@ -29,7 +29,15 @@ collector:
   suspect_mac_threshold: 30
   offline_miss_rounds: 2
   move_confirm_rounds: 2
+  # SNMP Trap 监听地址(接收 linkUp/linkDown 触发增量重扫); 留空则关闭
+  trap_addr: ${TRAP_ADDR:0.0.0.0:1162}
+  trap_debounce: 15s
 
 security:
   # 生产环境请通过 HOPTRACE_SECURITY_SECRET_KEY 环境变量注入
   secret_key: ${SECURITY_SECRET_KEY:hoptrace-dev-secret-change-me}
+  # 开启后所有 /api/v1/* (除 /api/v1/auth/login) 需要 JWT 鉴权与 RBAC 校验
+  auth_enabled: ${AUTH_ENABLED:false}
+  jwt_ttl: 24h
+  init_admin_user: ${INIT_ADMIN_USER:admin}
+  init_admin_password: ${INIT_ADMIN_PASSWORD:admin123}

@@ -52,7 +52,8 @@ func wireApp(confServer *conf.Server, confData *conf.Data, collector *conf.Colle
 	grpcServer := server.NewGRPCServer(confServer, deviceService, credentialService, discoveryService, topologyService, endpointService, dashboardService)
 	httpServer := server.NewHTTPServer(confServer, deviceService, credentialService, discoveryService, topologyService, endpointService, dashboardService)
 	poller := server.NewPoller(pollUsecase, jobRepo)
-	app := newApp(logger, grpcServer, httpServer, poller)
+	trapServer := server.NewTrapServer(collector, deviceRepo, pollUsecase)
+	app := newApp(logger, grpcServer, httpServer, poller, trapServer)
 	return app, func() {
 		cleanup()
 	}, nil
