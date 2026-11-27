@@ -66,6 +66,75 @@ function escapeHtml(s?: string): string {
     .replace(/>/g, '&gt;');
 }
 
+// 矩形防遮挡后处理：按卡片真实宽高（含角色徽章与留白）消除任意重叠节点
+function resolveNodeOverlaps(
+  graph: Graph,
+  nodes: TopoNode[],
+): { id: string; style: { x: number; y: number } }[] {
+  const boxes = nodes
+    .map((n) => {
+      const datum: any = graph.getNodeData(n.id);
+      const x = Number(datum?.style?.x);
+      const y = Number(datum?.style?.y);
+      if (Number.isNaN(x) || Number.isNaN(y)) return null;
+      const isEp = n.kind === 'endpoint';
+      return {
+        id: n.id,
+        x,
+        y,
+        ox: x,
+        oy: y,
+        // 设备卡片 152x54 + 右上角徽章 + 留白；终端胶囊 132x40 + 留白
+        halfW: isEp ? 78 : 96,
+        halfH: isEp ? 30 : 40,
+      };
+    })
+    .filter((b): b is NonNullable<typeof b> => b !== null);
+
+  if (boxes.length < 2) return [];
+
+  let moved = false;
+  for (let iter = 0; iter < 80; iter++) {
+    let anyOverlap = false;
+    for (let i = 0; i < boxes.length; i++) {
+      const a = boxes[i];
+      for (let j = i + 1; j < boxes.length; j++) {
+        const b = boxes[j];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        const overlapX = a.halfW + b.halfW - Math.abs(dx);
+        const overlapY = a.halfH + b.halfH - Math.abs(dy);
+        if (overlapX > 0 && overlapY > 0) {
+          anyOverlap = true;
+          moved = true;
+          if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
+            const angle = ((i * 7 + j * 13) % 360) * (Math.PI / 180);
+            dx = Math.cos(angle);
+            dy = Math.sin(angle);
+          }
+          if (overlapX < overlapY) {
+            const push = overlapX / 2 + 2;
+            const sign = dx >= 0 ? 1 : -1;
+            a.x -= sign * push;
+            b.x += sign * push;
+          } else {
+            const push = overlapY / 2 + 2;
+            const sign = dy >= 0 ? 1 : -1;
+            a.y -= sign * push;
+            b.y += sign * push;
+          }
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
+
+  if (!moved) return [];
+  return boxes
+    .filter((b) => Math.abs(b.x - b.ox) > 0.5 || Math.abs(b.y - b.oy) > 0.5)
+    .map((b) => ({ id: b.id, style: { x: b.x, y: b.y } }));
+}
+
 const TopologyPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -85,6 +154,7 @@ const TopologyPage: React.FC = () => {
   const [traceSrc, setTraceSrc] = useState('');
   const [traceDst, setTraceDst] = useState('');
   const [traceResult, setTraceResult] = useState<TracePathReply | null>(null);
+  const [relayoutSeed, setRelayoutSeed] = useState(0);
 
   const fetchTopology = useCallback(async () => {
     setLoading(true);
@@ -257,24 +327,32 @@ const TopologyPage: React.FC = () => {
     const layoutCfg = hasSavedLayout
       ? undefined
       : layoutType === 'dagre'
-        ? { type: 'dagre', rankdir: 'TB', nodesep: 48, ranksep: 115, nodeSize: [168, 64] }
+        ? { type: 'dagre', rankdir: 'TB', nodesep: 52, ranksep: 120, nodeSize: [184, 72] }
         : layoutType === 'concentric'
-          ? { type: 'concentric', nodeSize: 195, minNodeSpacing: 36, preventOverlap: true, equidistant: true }
+          ? { type: 'concentric', nodeSize: 205, minNodeSpacing: 40, preventOverlap: true, equidistant: true }
           : {
-              // d3-force 支持精确碰撞半径与强斥力，避免宽矩形设备卡片互相遮挡
+              // d3-force 同步迭代收敛 + 碰撞半径，随后叠加矩形防遮挡后处理彻底消除重叠
               type: 'd3-force',
+              animation: false,
+              iterations: 350,
               preventOverlap: true,
               link: {
-                distance: (e: any) => (e?.data?.kind === 'access' ? 150 : 230),
-                strength: 0.6,
+                distance: (e: any) => {
+                  const kind = e?._original?.data?.kind || e?.data?.kind;
+                  return kind === 'access' ? 190 : 280;
+                },
+                strength: 0.4,
               },
               collide: {
-                radius: (n: any) => (n?.data?.kind === 'endpoint' ? 82 : 104),
+                radius: (n: any) => {
+                  const kind = n?._original?.data?.kind || n?.data?.kind;
+                  return kind === 'endpoint' ? 92 : 122;
+                },
                 strength: 1,
-                iterations: 5,
+                iterations: 10,
               },
               manyBody: {
-                strength: -750,
+                strength: -950,
               },
             };
 
@@ -387,6 +465,19 @@ const TopologyPage: React.FC = () => {
       }
     });
 
+    graph.on('node:dblclick', (evt: any) => {
+      const id = evt?.target?.id;
+      const hit = id ? nodeMap.get(id) : undefined;
+      if (hit && hit.kind === 'device' && hit.endpointCount > 0 && !includeAllEndpoints) {
+        setSelectedNode(null);
+        setSelectedLink(null);
+        setExpandedDeviceIds((prev) =>
+          prev.includes(hit.refId) ? prev.filter((x) => x !== hit.refId) : [...prev, hit.refId],
+        );
+        setRelayoutSeed((s) => s + 1);
+      }
+    });
+
     graph.on('edge:click', (evt: any) => {
       const id = evt?.target?.id;
       const hit = id ? linkMap.get(id) : undefined;
@@ -396,8 +487,26 @@ const TopologyPage: React.FC = () => {
       }
     });
 
-    graph.render();
+    let cancelled = false;
     graphRef.current = graph;
+    graph
+      .render()
+      .then(async () => {
+        if (cancelled || graphRef.current !== graph) return;
+        if (!hasSavedLayout) {
+          const updates = resolveNodeOverlaps(graph, visibleNodes);
+          if (updates.length > 0) {
+            graph.updateNodeData(updates);
+            await graph.draw();
+          }
+          if (!cancelled && graphRef.current === graph) {
+            await graph.fitView();
+          }
+        }
+      })
+      .catch(() => {
+        // 忽略组件卸载/切换时的中止错误
+      });
 
     const onResize = () => {
       if (graphRef.current && containerRef.current) {
@@ -412,12 +521,13 @@ const TopologyPage: React.FC = () => {
     ro.observe(el);
     window.addEventListener('resize', onResize);
     return () => {
+      cancelled = true;
       ro.disconnect();
       window.removeEventListener('resize', onResize);
       graph.destroy();
       graphRef.current = null;
     };
-  }, [topo, layoutType, roleFilter, traceResult]);
+  }, [topo, layoutType, roleFilter, traceResult, relayoutSeed, includeAllEndpoints]);
 
   const handleSaveLayout = async () => {
     if (!graphRef.current) return;
@@ -501,6 +611,9 @@ const TopologyPage: React.FC = () => {
     setExpandedDeviceIds((prev) =>
       prev.includes(refId) ? prev.filter((id) => id !== refId) : [...prev, refId],
     );
+    setSelectedNode(null);
+    setSelectedLink(null);
+    setRelayoutSeed((s) => s + 1);
   };
 
   return (
@@ -553,6 +666,9 @@ const TopologyPage: React.FC = () => {
         <Button key="png" icon={<CameraOutlined />} onClick={handleExportPng}>
           导出 PNG
         </Button>,
+        <Button key="redraw" icon={<ApartmentOutlined />} onClick={() => setRelayoutSeed((s) => s + 1)}>
+          重绘
+        </Button>,
         <Button key="fit" icon={<ExpandOutlined />} onClick={() => graphRef.current?.fitView()} />,
         <Button key="rebuild" icon={<SyncOutlined />} loading={rebuilding} onClick={handleRebuild}>
           重建
@@ -603,7 +719,7 @@ const TopologyPage: React.FC = () => {
             <Tag color="blue">接入</Tag>
             <Tag color="green">在线终端</Tag>
             <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 4 }}>
-              悬停连线查看端口 · 点击节点展开终端
+              悬停连线查看端口 · 双击设备展开终端并重绘
             </span>
           </Space>
         }
