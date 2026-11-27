@@ -115,6 +115,7 @@ export default defineConfig({
    * @doc https://umijs.org/docs/max/layout-menu
    */
   title: 'HopTrace',
+  favicons: ['/logo.svg'],
   layout: {
     locale: false,
     ...defaultSettings,

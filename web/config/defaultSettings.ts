@@ -11,7 +11,7 @@ const Settings: ProLayoutProps & {
   fixSiderbar: true,
   colorWeak: false,
   title: 'HopTrace',
-  logo: undefined,
+  logo: '/logo.svg',
   iconfontUrl: '',
   token: {},
 };

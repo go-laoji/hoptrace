@@ -20,6 +20,7 @@ const LoginPage: React.FC = () => {
     >
       <div style={{ width: 400, background: '#fff', borderRadius: 12, padding: '24px 16px', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
         <LoginForm
+          logo="/logo.svg"
           title="HopTrace"
           subTitle="网络拓扑自动发现与终端管理平台"
           onFinish={async (vals: { username: string; password: string }) => {
