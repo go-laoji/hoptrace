@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getTopology,
   rebuildTopology,
+  subscribeLiveEvents,
   type TopoLink,
   type TopologyData,
   type TopoNode,
@@ -67,6 +68,7 @@ const TopologyPage: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedNode, setSelectedNode] = useState<TopoNode | null>(null);
   const [selectedLink, setSelectedLink] = useState<TopoLink | null>(null);
+  const [sseConnected, setSseConnected] = useState(false);
 
   const fetchTopology = useCallback(async () => {
     setLoading(true);
@@ -85,6 +87,19 @@ const TopologyPage: React.FC = () => {
 
   useEffect(() => {
     fetchTopology();
+  }, [fetchTopology]);
+
+  // 订阅后端 SSE：收到 Trap 增量采集或轮询更新时自动刷新拓扑
+  useEffect(() => {
+    return subscribeLiveEvents(
+      (ev) => {
+        if (ev.source === 'trap' && ev.message) {
+          message.info(ev.message);
+        }
+        fetchTopology();
+      },
+      setSseConnected,
+    );
   }, [fetchTopology]);
 
   // 渲染 AntV G6 v5 拓扑图
@@ -441,6 +456,14 @@ const TopologyPage: React.FC = () => {
             <span>
               节点 {topo.nodes.length} · 活跃链路 {topo.links.length}
             </span>
+            <Badge
+              status={sseConnected ? 'processing' : 'default'}
+              text={
+                <span style={{ fontSize: 12, color: sseConnected ? '#52c41a' : '#8c8c8c' }}>
+                  {sseConnected ? '实时推送已连接' : '实时推送重连中'}
+                </span>
+              }
+            />
           </Space>
         }
       >

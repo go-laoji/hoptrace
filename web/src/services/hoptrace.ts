@@ -451,3 +451,35 @@ export const saveWriteCredential = (data: Record<string, any>) =>
 
 export const deleteWriteCredential = (id: string) =>
   request(`/api/v1/control/credentials/${id}`, { method: 'DELETE' });
+
+// ---------- SSE 实时事件订阅 ----------
+
+export interface LiveEvent {
+  type: string;
+  source?: string;
+  device?: string;
+  message?: string;
+  at: number;
+}
+
+export function subscribeLiveEvents(
+  onUpdate: (ev: LiveEvent) => void,
+  onStatus?: (connected: boolean) => void,
+): () => void {
+  const tok = getToken();
+  const url = tok
+    ? `/api/v1/events/stream?token=${encodeURIComponent(tok)}`
+    : '/api/v1/events/stream';
+  const es = new EventSource(url);
+  es.addEventListener('connected', () => onStatus?.(true));
+  es.onopen = () => onStatus?.(true);
+  es.onerror = () => onStatus?.(false);
+  es.addEventListener('topology_updated', (e: MessageEvent) => {
+    try {
+      onUpdate(JSON.parse(e.data) as LiveEvent);
+    } catch {
+      onUpdate({ type: 'topology_updated', at: Math.floor(Date.now() / 1000) });
+    }
+  });
+  return () => es.close();
+}

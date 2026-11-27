@@ -9,7 +9,7 @@ import { PageContainer, ProCard } from '@ant-design/pro-components';
 import { history } from '@umijs/max';
 import { Alert, Button, Col, Progress, Row, Space, Statistic, Table, Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
-import { type DashboardData, getDashboard } from '@/services/hoptrace';
+import { type DashboardData, getDashboard, subscribeLiveEvents } from '@/services/hoptrace';
 import { ENDPOINT_TYPE_META, EVENT_META, fmtUnix, ROLE_META } from '../constants';
 
 const DashboardPage: React.FC = () => {
@@ -27,6 +27,9 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     load();
+    return subscribeLiveEvents(() => {
+      load();
+    });
   }, []);
 
   const devTotal = Number(data?.devicesTotal || 0);
