@@ -257,17 +257,36 @@ const TopologyPage: React.FC = () => {
     const layoutCfg = hasSavedLayout
       ? undefined
       : layoutType === 'dagre'
-        ? { type: 'dagre', rankdir: 'TB', nodesep: 48, ranksep: 115, nodeSize: [160, 60] }
+        ? { type: 'dagre', rankdir: 'TB', nodesep: 48, ranksep: 115, nodeSize: [168, 64] }
         : layoutType === 'concentric'
-          ? { type: 'concentric', nodeSize: 170, preventOverlap: true, equidistant: true }
-          : { type: 'force', linkDistance: 210, preventOverlap: true, nodeSize: 165 };
+          ? { type: 'concentric', nodeSize: 195, minNodeSpacing: 36, preventOverlap: true, equidistant: true }
+          : {
+              // d3-force 支持精确碰撞半径与强斥力，避免宽矩形设备卡片互相遮挡
+              type: 'd3-force',
+              preventOverlap: true,
+              link: {
+                distance: (e: any) => (e?.data?.kind === 'access' ? 150 : 230),
+                strength: 0.6,
+              },
+              collide: {
+                radius: (n: any) => (n?.data?.kind === 'endpoint' ? 82 : 104),
+                strength: 1,
+                iterations: 5,
+              },
+              manyBody: {
+                strength: -750,
+              },
+            };
+
+    const initWidth = el.clientWidth || window.innerWidth - 260;
+    const initHeight = el.clientHeight || Math.max(window.innerHeight - 190, 560);
 
     const graph = new Graph({
       container: el,
-      width: el.clientWidth || 1000,
-      height: 640,
+      width: initWidth,
+      height: initHeight,
       autoFit: 'view',
-      padding: [48, 48, 48, 48],
+      padding: [36, 36, 36, 36],
       data: { nodes: g6Nodes as any, edges: g6Edges as any },
       layout: layoutCfg,
       edge: {
@@ -382,11 +401,18 @@ const TopologyPage: React.FC = () => {
 
     const onResize = () => {
       if (graphRef.current && containerRef.current) {
-        graphRef.current.resize(containerRef.current.clientWidth || 1000, 640);
+        const w = containerRef.current.clientWidth;
+        const h = containerRef.current.clientHeight;
+        if (w > 0 && h > 0) {
+          graphRef.current.resize(w, h);
+        }
       }
     };
+    const ro = new ResizeObserver(onResize);
+    ro.observe(el);
     window.addEventListener('resize', onResize);
     return () => {
+      ro.disconnect();
       window.removeEventListener('resize', onResize);
       graph.destroy();
       graphRef.current = null;
@@ -562,7 +588,8 @@ const TopologyPage: React.FC = () => {
           body: {
             padding: 0,
             position: 'relative',
-            minHeight: 640,
+            height: 'calc(100vh - 185px)',
+            minHeight: 560,
             backgroundColor: '#fafbfd',
             backgroundImage: 'radial-gradient(#d9e1ec 1px, transparent 1px)',
             backgroundSize: '20px 20px',
@@ -602,7 +629,7 @@ const TopologyPage: React.FC = () => {
             <Empty description="暂无拓扑数据，请先在「发现与凭据」中扫描网络" />
           </div>
         ) : (
-          <div ref={containerRef} style={{ width: '100%', height: 640 }} />
+          <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
         )}
       </ProCard>
 
