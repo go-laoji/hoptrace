@@ -315,6 +315,7 @@ type ListDevicesRequest struct {
 	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
 	Page          int32                  `protobuf:"varint,5,opt,name=page,proto3" json:"page,omitempty"`
 	PageSize      int32                  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Site          string                 `protobuf:"bytes,7,opt,name=site,proto3" json:"site,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -389,6 +390,13 @@ func (x *ListDevicesRequest) GetPageSize() int32 {
 		return x.PageSize
 	}
 	return 0
+}
+
+func (x *ListDevicesRequest) GetSite() string {
+	if x != nil {
+		return x.Site
+	}
+	return ""
 }
 
 type ListDevicesReply struct {
@@ -1250,14 +1258,15 @@ const file_hoptrace_v1_device_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x1d \x01(\x03R\tcreatedAt\x12'\n" +
 	"\x0finterface_count\x18\x1e \x01(\x05R\x0einterfaceCount\x12%\n" +
-	"\x0eendpoint_count\x18\x1f \x01(\x05R\rendpointCount\"\xa3\x01\n" +
+	"\x0eendpoint_count\x18\x1f \x01(\x05R\rendpointCount\"\xb7\x01\n" +
 	"\x12ListDevicesRequest\x12\x18\n" +
 	"\akeyword\x18\x01 \x01(\tR\akeyword\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x16\n" +
 	"\x06family\x18\x03 \x01(\tR\x06family\x12\x12\n" +
 	"\x04role\x18\x04 \x01(\tR\x04role\x12\x12\n" +
 	"\x04page\x18\x05 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\"S\n" +
+	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\x12\x12\n" +
+	"\x04site\x18\a \x01(\tR\x04site\"S\n" +
 	"\x10ListDevicesReply\x12)\n" +
 	"\x05items\x18\x01 \x03(\v2\x13.hoptrace.v1.DeviceR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\"\"\n" +

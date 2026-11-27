@@ -85,6 +85,7 @@ message ListDevicesRequest {
   string role = 4;
   int32 page = 5;
   int32 page_size = 6;
+  string site = 7;
 }
 message ListDevicesReply {
   repeated Device items = 1;

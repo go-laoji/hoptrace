@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// SiteService 机房/办公区管理
+service SiteService {
+  rpc ListSites(ListSitesRequest) returns (ListSitesReply) {
+    option (google.api.http) = {get: "/api/v1/sites"};
+  }
+  rpc GetSite(GetSiteRequest) returns (Site) {
+    option (google.api.http) = {get: "/api/v1/sites/{id}"};
+  }
+  rpc CreateSite(CreateSiteRequest) returns (Site) {
+    option (google.api.http) = {
+      post: "/api/v1/sites"
+      body: "*"
+    };
+  }
+  rpc UpdateSite(UpdateSiteRequest) returns (Site) {
+    option (google.api.http) = {
+      put: "/api/v1/sites/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteSite(DeleteSiteRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/sites/{id}"};
+  }
+  rpc AssignDevices(AssignSiteDevicesRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/sites/{id}/devices"
+      body: "*"
+    };
+  }
+}
+
+message Site {
+  int64 id = 1;
+  string name = 2;
+  string code = 3;
+  string type = 4; // datacenter / office / branch / campus
+  string address = 5;
+  string contact = 6;
+  repeated string cidrs = 7;
+  string description = 8;
+  int32 device_count = 9;
+  int32 online_device_count = 10;
+  int32 endpoint_count = 11;
+  int64 created_at = 12;
+}
+
+message ListSitesRequest {
+  string keyword = 1;
+  string type = 2;
+}
+
+message ListSitesReply {
+  repeated Site items = 1;
+}
+
+message GetSiteRequest {
+  int64 id = 1;
+}
+
+message CreateSiteRequest {
+  string name = 1;
+  string code = 2;
+  string type = 3;
+  string address = 4;
+  string contact = 5;
+  repeated string cidrs = 6;
+  string description = 7;
+}
+
+message UpdateSiteRequest {
+  int64 id = 1;
+  string name = 2;
+  string code = 3;
+  string type = 4;
+  string address = 5;
+  string contact = 6;
+  repeated string cidrs = 7;
+  string description = 8;
+}
+
+message DeleteSiteRequest {
+  int64 id = 1;
+}
+
+message AssignSiteDevicesRequest {
+  int64 id = 1;
+  repeated int64 device_ids = 2;
+}

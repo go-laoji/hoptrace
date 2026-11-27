@@ -82,7 +82,7 @@ type DevicePO struct {
 	Role         string     `gorm:"size:30;index"`
 	RoleManual   bool
 	Status       string     `gorm:"size:20;index"`
-	Site         string     `gorm:"size:100"`
+	Site         string     `gorm:"size:100;index"`
 	Location     string     `gorm:"size:200"`
 	IPs          StringList `gorm:"type:text"`
 	ChassisMAC   string     `gorm:"size:20;index"`

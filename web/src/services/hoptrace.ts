@@ -256,6 +256,7 @@ export const listDevices = (params: {
   status?: string;
   family?: string;
   role?: string;
+  site?: string;
   page?: number;
   pageSize?: number;
 }) => request<{ items: Device[]; total: string }>('/api/v1/devices', { params });
@@ -691,3 +692,54 @@ export const diffBackups = (fromId: string, toId: string) =>
     '/api/v1/backups/diff',
     { params: { fromId, toId } },
   );
+
+// ---------- 机房 / 办公区管理 ----------
+
+export interface Site {
+  id: string;
+  name: string;
+  code: string;
+  type: 'datacenter' | 'office' | 'branch' | 'campus' | string;
+  address: string;
+  contact: string;
+  cidrs: string[];
+  description: string;
+  deviceCount: number;
+  onlineDeviceCount: number;
+  endpointCount: number;
+  createdAt: string;
+}
+
+export const listSites = (params?: { keyword?: string; type?: string }) =>
+  request<{ items: Site[] }>('/api/v1/sites', { params });
+
+export const getSite = (id: string) => request<Site>(`/api/v1/sites/${id}`);
+
+export const createSite = (data: {
+  name: string;
+  code?: string;
+  type?: string;
+  address?: string;
+  contact?: string;
+  cidrs?: string[];
+  description?: string;
+}) => request<Site>('/api/v1/sites', { method: 'POST', data });
+
+export const updateSite = (
+  id: string,
+  data: {
+    name: string;
+    code?: string;
+    type?: string;
+    address?: string;
+    contact?: string;
+    cidrs?: string[];
+    description?: string;
+  },
+) => request<Site>(`/api/v1/sites/${id}`, { method: 'PUT', data });
+
+export const deleteSite = (id: string) =>
+  request(`/api/v1/sites/${id}`, { method: 'DELETE' });
+
+export const assignSiteDevices = (id: string, deviceIds: string[]) =>
+  request(`/api/v1/sites/${id}/devices`, { method: 'POST', data: { deviceIds } });

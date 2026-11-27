@@ -35,6 +35,7 @@ type DeviceFilter struct {
 	Status  string
 	Family  string
 	Role    string
+	Site    string
 }
 
 // DeviceRepo 设备与接口仓储。

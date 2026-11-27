@@ -25,6 +25,7 @@ func NewGRPCServer(
 	alert *service.AlertService,
 	ipam *service.IpamService,
 	backup *service.BackupService,
+	site *service.SiteService,
 ) *grpc.Server {
 	opts := []grpc.ServerOption{
 		grpc.Middleware(
@@ -53,5 +54,6 @@ func NewGRPCServer(
 	v1.RegisterAlertServiceServer(srv, alert)
 	v1.RegisterIpamServiceServer(srv, ipam)
 	v1.RegisterBackupServiceServer(srv, backup)
+	v1.RegisterSiteServiceServer(srv, site)
 	return srv
 }

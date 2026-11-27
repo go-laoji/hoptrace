@@ -24,6 +24,7 @@ func (s *DeviceService) ListDevices(ctx context.Context, req *v1.ListDevicesRequ
 		Status:  req.GetStatus(),
 		Family:  req.GetFamily(),
 		Role:    req.GetRole(),
+		Site:    req.GetSite(),
 	}, int(req.GetPage()), int(req.GetPageSize()))
 	if err != nil {
 		return nil, err

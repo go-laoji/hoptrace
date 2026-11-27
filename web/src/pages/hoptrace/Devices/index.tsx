@@ -20,7 +20,9 @@ import {
   listCredentials,
   listDevices,
   listInterfaces,
+  listSites,
   pollDevice,
+  type Site,
   updateDevice,
 } from '@/services/hoptrace';
 import { downloadCsv, fmtBps, fmtUnix, fmtUptime, IF_KIND_META, ROLE_META, STATUS_META } from '../constants';
@@ -28,6 +30,7 @@ import { downloadCsv, fmtBps, fmtUnix, fmtUptime, IF_KIND_META, ROLE_META, STATU
 const DevicesPage: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const [creds, setCreds] = useState<Credential[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Device | null>(null);
   const [detail, setDetail] = useState<Device | null>(null);
@@ -37,6 +40,7 @@ const DevicesPage: React.FC = () => {
 
   useEffect(() => {
     listCredentials().then((r) => setCreds(r.items || [])).catch(() => {});
+    listSites().then((r) => setSites(r.items || [])).catch(() => {});
   }, []);
 
   const openDetail = async (d: Device) => {
@@ -81,6 +85,21 @@ const DevicesPage: React.FC = () => {
       ),
     },
     { title: '管理 IP', dataIndex: 'mgmtIp', search: false, width: 135, render: (v) => v || '-' },
+    {
+      title: '机房 / 办公区',
+      dataIndex: 'site',
+      width: 130,
+      valueType: 'select',
+      fieldProps: {
+        allowClear: true,
+        placeholder: '全部机房/办公区',
+        options: [
+          ...sites.map((s) => ({ label: s.name, value: s.name })),
+          { label: '未归属', value: '__unassigned__' },
+        ],
+      },
+      render: (_, r) => (r.site ? <Tag color="geekblue">{r.site}</Tag> : <span style={{ color: '#bfbfbf' }}>未归属</span>),
+    },
     {
       title: '状态',
       dataIndex: 'status',
@@ -153,6 +172,7 @@ const DevicesPage: React.FC = () => {
   ];
 
   const credOptions = creds.map((c) => ({ label: `${c.name} (${c.version})`, value: c.id }));
+  const siteOptions = sites.map((s) => ({ label: s.name, value: s.name }));
 
   return (
     <PageContainer title="网络设备">
@@ -188,6 +208,7 @@ const DevicesPage: React.FC = () => {
             keyword: params.keyword,
             status: params.status,
             role: params.role,
+            site: params.site,
             page: params.current,
             pageSize: params.pageSize,
           });
@@ -217,8 +238,15 @@ const DevicesPage: React.FC = () => {
         />
         <ProFormText name="name" label="设备名称（留空自动读取 sysName）" />
         <ProFormDigit name="snmpPort" label="SNMP 端口" initialValue={161} fieldProps={{ precision: 0 }} />
-        <ProFormText name="site" label="站点" />
-        <ProFormText name="location" label="物理位置" />
+        <ProFormSelect
+          name="site"
+          label="所属机房 / 办公区"
+          allowClear
+          showSearch
+          options={siteOptions}
+          placeholder="请选择机房或办公区（可先在「机房与办公区」中新建）"
+        />
+        <ProFormText name="location" label="物理位置（机柜/楼层）" />
       </ModalForm>
 
       <ModalForm
@@ -250,8 +278,15 @@ const DevicesPage: React.FC = () => {
           allowClear
           options={Object.entries(ROLE_META).map(([k, v]) => ({ label: v.label, value: k }))}
         />
-        <ProFormText name="site" label="站点" />
-        <ProFormText name="location" label="位置" />
+        <ProFormSelect
+          name="site"
+          label="所属机房 / 办公区"
+          allowClear
+          showSearch
+          options={siteOptions}
+          placeholder="请选择机房或办公区"
+        />
+        <ProFormText name="location" label="物理位置（机柜/楼层）" />
       </ModalForm>
 
       <Drawer

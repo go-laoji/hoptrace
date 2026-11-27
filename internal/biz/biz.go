@@ -22,6 +22,7 @@ var ProviderSet = wire.NewSet(
 	NewAlertUsecase,
 	NewIpamUsecase,
 	NewBackupUsecase,
+	NewSiteUsecase,
 )
 
 // NewOptions 从配置构建 biz 运行参数。

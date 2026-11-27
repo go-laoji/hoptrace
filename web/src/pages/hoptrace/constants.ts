@@ -1,5 +1,12 @@
 import dayjs from 'dayjs';
 
+export const SITE_TYPE_META: Record<string, { label: string; color: string }> = {
+  datacenter: { label: '机房', color: 'purple' },
+  office: { label: '办公区', color: 'blue' },
+  branch: { label: '分支机构', color: 'cyan' },
+  campus: { label: '园区', color: 'green' },
+};
+
 export const ROLE_META: Record<string, { label: string; color: string }> = {
   firewall: { label: '防火墙', color: 'volcano' },
   core: { label: '核心交换机', color: 'purple' },

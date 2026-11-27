@@ -17,6 +17,8 @@ import {
   type DiscoveryJob,
   listCredentials,
   listDiscoveryJobs,
+  listSites,
+  type Site,
   startDiscovery,
   updateCredential,
 } from '@/services/hoptrace';
@@ -24,6 +26,7 @@ import { fmtUnix } from '../constants';
 
 const DiscoveryPage: React.FC = () => {
   const [creds, setCreds] = useState<Credential[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [jobs, setJobs] = useState<DiscoveryJob[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,9 +38,10 @@ const DiscoveryPage: React.FC = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [c, j] = await Promise.all([listCredentials(), listDiscoveryJobs(20)]);
+      const [c, j, s] = await Promise.all([listCredentials(), listDiscoveryJobs(20), listSites()]);
       setCreds(c.items || []);
       setJobs(j.items || []);
+      setSites(s.items || []);
     } finally {
       setLoading(false);
     }
@@ -137,8 +141,19 @@ const DiscoveryPage: React.FC = () => {
                   options={creds.map((c) => ({ label: `${c.name} (${c.version})`, value: c.id }))}
                 />
               </Form.Item>
-              <Form.Item name="site" label="归属站点（可选）">
-                <Input placeholder="例如 总部园区" />
+              <Form.Item name="site" label="归属机房 / 办公区（可选）">
+                <Select
+                  allowClear
+                  showSearch
+                  placeholder="选择已配置的机房或办公区"
+                  options={sites.map((s) => ({ label: s.name, value: s.name }))}
+                  onChange={(val) => {
+                    const hit = sites.find((s) => s.name === val);
+                    if (hit && (hit.cidrs || []).length > 0 && !form.getFieldValue('cidrs')) {
+                      form.setFieldValue('cidrs', hit.cidrs.join(', '));
+                    }
+                  }}
+                />
               </Form.Item>
               <Form.Item name="expandNeighbors" label="通过 LLDP 邻居递归扩散" valuePropName="checked">
                 <Switch />

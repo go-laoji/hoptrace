@@ -29,9 +29,11 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getTopology,
+  listSites,
   rebuildTopology,
   resetTopologyLayout,
   saveTopologyLayout,
+  type Site,
   subscribeLiveEvents,
   type TopoLink,
   type TopologyData,
@@ -150,11 +152,23 @@ const TopologyPage: React.FC = () => {
   const [selectedLink, setSelectedLink] = useState<TopoLink | null>(null);
   const [sseConnected, setSseConnected] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [selectedSite, setSelectedSite] = useState<string>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('site') || '';
+    } catch {
+      return '';
+    }
+  });
   const [traceOpen, setTraceOpen] = useState(false);
   const [traceSrc, setTraceSrc] = useState('');
   const [traceDst, setTraceDst] = useState('');
   const [traceResult, setTraceResult] = useState<TracePathReply | null>(null);
   const [relayoutSeed, setRelayoutSeed] = useState(0);
+
+  useEffect(() => {
+    listSites().then((r) => setSites(r.items || [])).catch(() => {});
+  }, []);
 
   const fetchTopology = useCallback(async () => {
     setLoading(true);
@@ -162,6 +176,7 @@ const TopologyPage: React.FC = () => {
       const res = await getTopology({
         includeAllEndpoints,
         expandDeviceIds: includeAllEndpoints ? [] : expandedDeviceIds,
+        site: selectedSite || undefined,
       });
       // 仅隐藏设备间已失效的 stale 链路；接入终端连线(kind=access)即使是离线(stale)也保留虚线显示，避免终端悬空无连线
       const activeLinks = (res.links || []).filter((l) => l.kind === 'access' || l.status !== 'stale');
@@ -169,7 +184,7 @@ const TopologyPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [includeAllEndpoints, expandedDeviceIds]);
+  }, [includeAllEndpoints, expandedDeviceIds, selectedSite]);
 
   useEffect(() => {
     fetchTopology();
@@ -628,6 +643,22 @@ const TopologyPage: React.FC = () => {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onSearch={handleSearch}
+        />,
+        <Select
+          key="site"
+          allowClear
+          placeholder="全部机房/办公区"
+          style={{ minWidth: 150 }}
+          value={selectedSite || undefined}
+          onChange={(v) => {
+            setSelectedSite(v || '');
+            setExpandedDeviceIds([]);
+            setRelayoutSeed((s) => s + 1);
+          }}
+          options={sites.map((s) => ({
+            label: `${s.name} (${s.deviceCount || 0})`,
+            value: s.name,
+          }))}
         />,
         <Select
           key="role"

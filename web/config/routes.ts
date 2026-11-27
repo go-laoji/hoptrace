@@ -17,6 +17,12 @@ export default [
     component: './hoptrace/Topology',
   },
   {
+    path: '/sites',
+    name: '机房与办公区',
+    icon: 'BankOutlined',
+    component: './hoptrace/Sites',
+  },
+  {
     path: '/devices',
     name: '网络设备',
     icon: 'ClusterOutlined',

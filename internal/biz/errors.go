@@ -17,6 +17,10 @@ var (
 	ErrEndpointInvalid        = errors.BadRequest(v1.ErrorReason_ENDPOINT_INVALID_ARGUMENT.String(), "invalid endpoint argument")
 	ErrDiscoveryNotFound      = errors.NotFound(v1.ErrorReason_DISCOVERY_NOT_FOUND.String(), "discovery job not found")
 	ErrDiscoveryInvalid       = errors.BadRequest(v1.ErrorReason_DISCOVERY_INVALID_ARGUMENT.String(), "invalid discovery argument")
+	ErrSiteNotFound           = errors.NotFound(v1.ErrorReason_SITE_NOT_FOUND.String(), "site not found")
+	ErrSiteInvalid            = errors.BadRequest(v1.ErrorReason_SITE_INVALID_ARGUMENT.String(), "invalid site argument")
+	ErrSiteAlreadyExists      = errors.Conflict(v1.ErrorReason_SITE_ALREADY_EXISTS.String(), "site name already exists")
+	ErrSiteInUse              = errors.Conflict(v1.ErrorReason_SITE_IN_USE.String(), "site still has assigned devices")
 )
 
 // ErrCollectFailed 采集失败(设备不可达、凭据错误等)。

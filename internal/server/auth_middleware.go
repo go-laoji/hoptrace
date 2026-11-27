@@ -98,6 +98,8 @@ func allowed(role, op string) bool {
 		v1.OperationAlertServiceListAlerts,
 		v1.OperationAlertServiceListChannels,
 		v1.OperationAlertServiceListSyslogs,
+		v1.OperationSiteServiceListSites,
+		v1.OperationSiteServiceGetSite,
 		v1.OperationIpamServiceListSubnets,
 		v1.OperationIpamServiceGetSubnetDetail,
 		v1.OperationIpamServiceListAnomalies,

@@ -35,6 +35,13 @@ func (r *deviceRepo) List(ctx context.Context, f biz.DeviceFilter, page, size in
 	if f.Role != "" {
 		q = q.Where("role = ?", f.Role)
 	}
+	if f.Site != "" {
+		if f.Site == "__unassigned__" {
+			q = q.Where("site = '' OR site IS NULL")
+		} else {
+			q = q.Where("site = ?", f.Site)
+		}
+	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
