@@ -169,6 +169,17 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 	walkCol(oidIfOperStatus, func(idx int, p PDU) { get(idx).OperStatus = ifStatusStr(pduInt64(p)) })
 	walkCol(oidIfHCInOctets, func(idx int, p PDU) { get(idx).InOctets = uint64(pduInt64(p)) })
 	walkCol(oidIfHCOutOctets, func(idx int, p PDU) { get(idx).OutOctets = uint64(pduInt64(p)) })
+	// 兜底 32 位计数器(部分老款百兆接入口可能不报 ifHC*Octets)
+	walkCol(oidIfInOctets, func(idx int, p PDU) {
+		if get(idx).InOctets == 0 {
+			get(idx).InOctets = uint64(pduInt64(p))
+		}
+	})
+	walkCol(oidIfOutOctets, func(idx int, p PDU) {
+		if get(idx).OutOctets == 0 {
+			get(idx).OutOctets = uint64(pduInt64(p))
+		}
+	})
 	walkCol(oidIfInErrors, func(idx int, p PDU) { get(idx).InErrors = pduInt64(p) })
 	walkCol(oidIfOutErrors, func(idx int, p PDU) { get(idx).OutErrors = pduInt64(p) })
 

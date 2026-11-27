@@ -172,9 +172,18 @@ func (uc *TopologyUsecase) Get(ctx context.Context, expand []uint, all bool, sit
 				ID: id, Kind: "endpoint", RefID: e.ID, Name: name, IP: e.IP, Status: e.Status,
 				Vendor: e.Vendor, Type: e.Type,
 			})
+			var inBps, outBps int64
+			var util float64
+			if e.Status == EndpointOnline && e.IfIndex > 0 {
+				if it := ifByKey[IfKey{e.DeviceID, e.IfIndex}]; it != nil {
+					inBps, outBps, util = it.InBps, it.OutBps, it.UtilizationPct
+				}
+			}
 			out.Links = append(out.Links, &TopoLink{
 				ID: "a" + strconv.Itoa(int(e.ID)), Source: devNodeID(e.DeviceID), Target: id,
-				SourcePort: e.IfName, Kind: "access", Confidence: 1, Status: map[bool]string{true: LinkUp, false: LinkStale}[e.Status == EndpointOnline],
+				SourcePort: e.IfName, Kind: "access", Confidence: 1,
+				Status: map[bool]string{true: LinkUp, false: LinkStale}[e.Status == EndpointOnline],
+				InBps:  inBps, OutBps: outBps, UtilizationPct: util,
 			})
 		}
 	}
