@@ -52,8 +52,7 @@ export default [
     redirect: '/dashboard',
   },
   {
+    path: '*',
     component: './exception/404',
-    layout: false,
-    path: '/*',
   },
 ];
