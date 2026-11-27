@@ -473,11 +473,45 @@ func readFDB(ctx context.Context, sess Session) ([]biz.FdbEntry, []string) {
 		return out, warns
 	}
 
-	// 兜底 BRIDGE-MIB: 索引 m1.m2.m3.m4.m5.m6
+	// 优先 2: 华为私有 HUAWEI-L2MAM-MIB (hwDynFdbPort, 常见索引 m1.m2.m3.m4.m5.m6.vlan.vsi -> ifIndex)
+	if hwPorts, err := sess.Walk(ctx, oidHwDynFdbPort); err == nil && len(hwPorts) > 0 {
+		var out []biz.FdbEntry
+		for _, p := range hwPorts {
+			parts := strings.Split(suffix(p.OID, oidHwDynFdbPort), ".")
+			if len(parts) < 7 {
+				continue
+			}
+			mac := oidPartsToMAC(parts[0:6])
+			vlan, err := strconv.Atoi(parts[6])
+			if !biz.ValidEndpointMAC(mac) || err != nil || vlan <= 0 || vlan > 4094 {
+				continue
+			}
+			ifIdx := int(pduInt64(p))
+			if ifIdx <= 0 {
+				continue
+			}
+			out = append(out, biz.FdbEntry{MAC: mac, VLAN: vlan, IfIndex: ifIdx})
+		}
+		if len(out) > 0 {
+			return out, warns
+		}
+	}
+
+	// 兜底 BRIDGE-MIB: 索引 m1.m2.m3.m4.m5.m6 (本身不含 VLAN, 尝试用 dot1qPvid 回填端口 PVID)
 	dPorts, err := sess.Walk(ctx, oidDot1dTpFdbPort)
 	if err != nil {
 		warns = append(warns, "fdb: "+err.Error())
 		return nil, warns
+	}
+	pvidByPort := map[int]int{}
+	if pvids, err := sess.Walk(ctx, oidDot1qPvid); err == nil {
+		for _, p := range pvids {
+			if bp, err := strconv.Atoi(suffix(p.OID, oidDot1qPvid)); err == nil {
+				if v := int(pduInt64(p)); v > 0 && v <= 4094 {
+					pvidByPort[bp] = v
+				}
+			}
+		}
 	}
 	status := map[string]int{}
 	if dSt, err := sess.Walk(ctx, oidDot1dTpFdbStatus); err == nil {
@@ -507,7 +541,11 @@ func readFDB(ctx context.Context, sess Session) ([]biz.FdbEntry, []string) {
 		if ifIdx <= 0 {
 			continue
 		}
-		out = append(out, biz.FdbEntry{MAC: mac, VLAN: 1, IfIndex: ifIdx})
+		vlan := pvidByPort[bp]
+		if vlan == 0 {
+			vlan = 1
+		}
+		out = append(out, biz.FdbEntry{MAC: mac, VLAN: vlan, IfIndex: ifIdx})
 	}
 	return out, warns
 }

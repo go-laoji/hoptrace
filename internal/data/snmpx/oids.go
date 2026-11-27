@@ -38,6 +38,13 @@ const (
 	oidDot1dTpFdbStatus      = "1.3.6.1.2.1.17.4.3.1.3"
 	oidDot1qTpFdbPort        = "1.3.6.1.2.1.17.7.1.2.2.1.2"
 	oidDot1qTpFdbStatus      = "1.3.6.1.2.1.17.7.1.2.2.1.3"
+	oidDot1qPvid             = "1.3.6.1.2.1.17.7.1.4.5.1.1" // dot1dBasePort -> PVID
+
+	// HUAWEI-L2MAM-MIB (华为带 VLAN 的动态 MAC 表; 当 Q-BRIDGE-MIB 为空时作为优先兜底)
+	// hwDynFdbPort: .<m1>.<m2>.<m3>.<m4>.<m5>.<m6>.<vlanId>.<vsiId> -> ifIndex (或 .<vlanId>.<m1..m6>)
+	oidHwDynFdbPort = "1.3.6.1.4.1.2011.5.25.42.2.1.3.1.4"
+	// HUAWEI-L2IF-MIB: hwL2IfPvid (.l2IfPortIndex -> PVID)
+	oidHwL2IfPvid = "1.3.6.1.4.1.2011.5.25.42.1.1.1.3.1.4"
 
 	// LLDP-MIB (IEEE 802.1AB)
 	oidLldpLocChassisID    = "1.0.8802.1.1.2.1.3.2.0"

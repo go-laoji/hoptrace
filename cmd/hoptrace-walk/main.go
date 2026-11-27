@@ -35,6 +35,8 @@ var defaultTrees = []walkTree{
 	{"BRIDGE-MIB base", "1.3.6.1.2.1.17.1"},
 	{"BRIDGE-MIB FDB (dot1dTpFdb)", "1.3.6.1.2.1.17.4.3"},
 	{"Q-BRIDGE-MIB FDB (dot1qTpFdb)", "1.3.6.1.2.1.17.7.1.2.2"},
+	{"Q-BRIDGE-MIB PVID (dot1qPvid)", "1.3.6.1.2.1.17.7.1.4.5.1.1"},
+	{"Huawei L2MAM FDB (hwDynFdbPort)", "1.3.6.1.4.1.2011.5.25.42.2.1.3.1.4"},
 	{"LLDP-MIB local", "1.0.8802.1.1.2.1.3"},
 	{"LLDP-MIB remote", "1.0.8802.1.1.2.1.4"},
 	{"ENTITY-MIB class", "1.3.6.1.2.1.47.1.1.1.1.5"},
