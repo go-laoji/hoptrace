@@ -25,7 +25,9 @@ var ProviderSet = wire.NewSet(
 	NewJobRepo,
 	NewStatsRepo,
 	NewUserRepo,
+	NewControlRepo,
 	NewCollector,
+	NewControlExecutor,
 )
 
 // Data 持有长生命周期的 GORM 客户端与字段加密器。
@@ -91,6 +93,8 @@ func NewData(c *conf.Data, sec *conf.Security) (*Data, func(), error) {
 			&EndpointEventPO{},
 			&DiscoveryJobPO{},
 			&UserPO{},
+			&WriteCredentialPO{},
+			&ControlActionPO{},
 		); err != nil {
 			return nil, nil, err
 		}

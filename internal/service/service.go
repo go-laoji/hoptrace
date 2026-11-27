@@ -11,4 +11,5 @@ var ProviderSet = wire.NewSet(
 	NewEndpointService,
 	NewDashboardService,
 	NewAuthService,
+	NewControlService,
 )

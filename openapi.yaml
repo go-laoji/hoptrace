@@ -51,6 +51,195 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/control/actions:
+        get:
+            tags:
+                - ControlService
+            operationId: ControlService_ListControlActions
+            parameters:
+                - name: status
+                  in: query
+                  schema:
+                    type: string
+                - name: deviceId
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListControlActionsReply'
+        post:
+            tags:
+                - ControlService
+            operationId: ControlService_CreateControlAction
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.CreateControlActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ControlAction'
+    /api/v1/control/actions/{id}/approve:
+        post:
+            tags:
+                - ControlService
+            operationId: ControlService_ApproveControlAction
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.ApproveControlActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ControlAction'
+    /api/v1/control/actions/{id}/execute:
+        post:
+            tags:
+                - ControlService
+            operationId: ControlService_ExecuteControlAction
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.ExecuteControlActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ControlAction'
+    /api/v1/control/actions/{id}/reject:
+        post:
+            tags:
+                - ControlService
+            operationId: ControlService_RejectControlAction
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.RejectControlActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ControlAction'
+    /api/v1/control/actions/{id}/rollback:
+        post:
+            tags:
+                - ControlService
+            operationId: ControlService_RollbackControlAction
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.RollbackControlActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ControlAction'
+    /api/v1/control/credentials:
+        get:
+            tags:
+                - ControlService
+            description: NETCONF/SSH 写通道凭据管理(与只读 SNMP 凭据隔离)
+            operationId: ControlService_ListWriteCredentials
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListWriteCredentialsReply'
+        post:
+            tags:
+                - ControlService
+            operationId: ControlService_SaveWriteCredential
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.SaveWriteCredentialRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.WriteCredential'
+    /api/v1/control/credentials/{id}:
+        delete:
+            tags:
+                - ControlService
+            operationId: ControlService_DeleteWriteCredential
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
     /api/v1/credentials:
         get:
             tags:
@@ -554,6 +743,13 @@ paths:
                     content: {}
 components:
     schemas:
+        hoptrace.v1.ApproveControlActionRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                autoExecute:
+                    type: boolean
         hoptrace.v1.ChangePasswordRequest:
             type: object
             properties:
@@ -561,6 +757,74 @@ components:
                     type: string
                 newPassword:
                     type: string
+        hoptrace.v1.ControlAction:
+            type: object
+            properties:
+                id:
+                    type: string
+                action:
+                    type: string
+                    description: shutdown_port / undo_shutdown_port / set_port_vlan / set_port_desc / block_endpoint / unblock_endpoint
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+                ifIndex:
+                    type: integer
+                    format: int32
+                ifName:
+                    type: string
+                endpointId:
+                    type: string
+                endpointMac:
+                    type: string
+                paramValue:
+                    type: string
+                prevValue:
+                    type: string
+                protocol:
+                    type: string
+                dryRunPreview:
+                    type: string
+                rollbackPreview:
+                    type: string
+                status:
+                    type: string
+                    description: pending_approval / approved / rejected / executed / failed / rolled_back
+                reason:
+                    type: string
+                requestedBy:
+                    type: string
+                approvedBy:
+                    type: string
+                resultLog:
+                    type: string
+                createdAt:
+                    type: string
+                executedAt:
+                    type: string
+                rolledBackAt:
+                    type: string
+        hoptrace.v1.CreateControlActionRequest:
+            type: object
+            properties:
+                action:
+                    type: string
+                deviceId:
+                    type: string
+                ifIndex:
+                    type: integer
+                    format: int32
+                endpointId:
+                    type: string
+                paramValue:
+                    type: string
+                protocol:
+                    type: string
+                reason:
+                    type: string
+                dryRunOnly:
+                    type: boolean
         hoptrace.v1.CreateDeviceRequest:
             type: object
             properties:
@@ -864,6 +1128,11 @@ components:
                     type: string
                 until:
                     type: string
+        hoptrace.v1.ExecuteControlActionRequest:
+            type: object
+            properties:
+                id:
+                    type: string
         hoptrace.v1.Interface:
             type: object
             properties:
@@ -904,6 +1173,15 @@ components:
                 name:
                     type: string
                 value:
+                    type: string
+        hoptrace.v1.ListControlActionsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.ControlAction'
+                total:
                     type: string
         hoptrace.v1.ListCredentialsReply:
             type: object
@@ -960,6 +1238,13 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/hoptrace.v1.User'
+        hoptrace.v1.ListWriteCredentialsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.WriteCredential'
         hoptrace.v1.LoginReply:
             type: object
             properties:
@@ -977,6 +1262,18 @@ components:
                 password:
                     type: string
         hoptrace.v1.PollDeviceRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+        hoptrace.v1.RejectControlActionRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                reason:
+                    type: string
+        hoptrace.v1.RollbackControlActionRequest:
             type: object
             properties:
                 id:
@@ -1005,6 +1302,24 @@ components:
                 port:
                     type: integer
                     format: int32
+        hoptrace.v1.SaveWriteCredentialRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                protocol:
+                    type: string
+                username:
+                    type: string
+                password:
+                    type: string
+                port:
+                    type: integer
+                    format: int32
+                nacWebhookUrl:
+                    type: string
         hoptrace.v1.StartDiscoveryRequest:
             type: object
             properties:
@@ -1139,9 +1454,31 @@ components:
                     type: string
                 createdAt:
                     type: string
+        hoptrace.v1.WriteCredential:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                protocol:
+                    type: string
+                username:
+                    type: string
+                port:
+                    type: integer
+                    format: int32
+                hasPassword:
+                    type: boolean
+                nacWebhookUrl:
+                    type: string
+                createdAt:
+                    type: string
 tags:
     - name: AuthService
       description: AuthService 登录鉴权与用户管理(RBAC)
+    - name: ControlService
+      description: ControlService 设备端口管控、终端封禁审批流与回滚(M2)
     - name: CredentialService
       description: CredentialService SNMP 凭据管理(密文字段不会回显)
     - name: DashboardService

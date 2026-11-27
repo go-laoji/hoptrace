@@ -61,9 +61,17 @@ func allowed(role, op string) bool {
 	if role == biz.UserRoleAdmin {
 		return true
 	}
-	// 用户管理仅限 admin
+	// 用户管理、管控审批/执行/回滚与写凭据管理仅限 admin
 	switch op {
-	case v1.OperationAuthServiceListUsers, v1.OperationAuthServiceCreateUser, v1.OperationAuthServiceDeleteUser:
+	case v1.OperationAuthServiceListUsers,
+		v1.OperationAuthServiceCreateUser,
+		v1.OperationAuthServiceDeleteUser,
+		v1.OperationControlServiceApproveControlAction,
+		v1.OperationControlServiceRejectControlAction,
+		v1.OperationControlServiceExecuteControlAction,
+		v1.OperationControlServiceRollbackControlAction,
+		v1.OperationControlServiceSaveWriteCredential,
+		v1.OperationControlServiceDeleteWriteCredential:
 		return false
 	}
 	if role == biz.UserRoleOperator {
@@ -82,7 +90,9 @@ func allowed(role, op string) bool {
 		v1.OperationEndpointServiceListEvents,
 		v1.OperationDiscoveryServiceListJobs,
 		v1.OperationDiscoveryServiceGetJob,
-		v1.OperationCredentialServiceListCredentials:
+		v1.OperationCredentialServiceListCredentials,
+		v1.OperationControlServiceListControlActions,
+		v1.OperationControlServiceListWriteCredentials:
 		return true
 	default:
 		return false

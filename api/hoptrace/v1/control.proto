@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// ControlService 设备端口管控、终端封禁审批流与回滚(M2)
+service ControlService {
+  rpc ListControlActions(ListControlActionsRequest) returns (ListControlActionsReply) {
+    option (google.api.http) = {get: "/api/v1/control/actions"};
+  }
+  rpc CreateControlAction(CreateControlActionRequest) returns (ControlAction) {
+    option (google.api.http) = {
+      post: "/api/v1/control/actions"
+      body: "*"
+    };
+  }
+  rpc ApproveControlAction(ApproveControlActionRequest) returns (ControlAction) {
+    option (google.api.http) = {
+      post: "/api/v1/control/actions/{id}/approve"
+      body: "*"
+    };
+  }
+  rpc RejectControlAction(RejectControlActionRequest) returns (ControlAction) {
+    option (google.api.http) = {
+      post: "/api/v1/control/actions/{id}/reject"
+      body: "*"
+    };
+  }
+  rpc ExecuteControlAction(ExecuteControlActionRequest) returns (ControlAction) {
+    option (google.api.http) = {
+      post: "/api/v1/control/actions/{id}/execute"
+      body: "*"
+    };
+  }
+  rpc RollbackControlAction(RollbackControlActionRequest) returns (ControlAction) {
+    option (google.api.http) = {
+      post: "/api/v1/control/actions/{id}/rollback"
+      body: "*"
+    };
+  }
+  // NETCONF/SSH 写通道凭据管理(与只读 SNMP 凭据隔离)
+  rpc ListWriteCredentials(google.protobuf.Empty) returns (ListWriteCredentialsReply) {
+    option (google.api.http) = {get: "/api/v1/control/credentials"};
+  }
+  rpc SaveWriteCredential(SaveWriteCredentialRequest) returns (WriteCredential) {
+    option (google.api.http) = {
+      post: "/api/v1/control/credentials"
+      body: "*"
+    };
+  }
+  rpc DeleteWriteCredential(DeleteWriteCredentialRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/control/credentials/{id}"};
+  }
+}
+
+message ControlAction {
+  int64 id = 1;
+  // shutdown_port / undo_shutdown_port / set_port_vlan / set_port_desc / block_endpoint / unblock_endpoint
+  string action = 2;
+  int64 device_id = 3;
+  string device_name = 4;
+  int32 if_index = 5;
+  string if_name = 6;
+  int64 endpoint_id = 7;
+  string endpoint_mac = 8;
+  string param_value = 9; // 例如目标 VLAN 或端口描述
+  string prev_value = 10; // 回滚用原值
+  string protocol = 11; // netconf / ssh / sim
+  string dry_run_preview = 12; // 即将下发的配置预览
+  string rollback_preview = 13; // 回滚配置预览
+  // pending_approval / approved / rejected / executed / failed / rolled_back
+  string status = 14;
+  string reason = 15;
+  string requested_by = 16;
+  string approved_by = 17;
+  string result_log = 18;
+  int64 created_at = 19;
+  int64 executed_at = 20;
+  int64 rolled_back_at = 21;
+}
+
+message ListControlActionsRequest {
+  string status = 1;
+  int64 device_id = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListControlActionsReply {
+  repeated ControlAction items = 1;
+  int64 total = 2;
+}
+
+message CreateControlActionRequest {
+  string action = 1;
+  int64 device_id = 2;
+  int32 if_index = 3;
+  int64 endpoint_id = 4;
+  string param_value = 5;
+  string protocol = 6; // netconf(默认) / ssh
+  string reason = 7;
+  bool dry_run_only = 8; // true 仅返回预览,不落库创建审批单
+}
+
+message ApproveControlActionRequest {
+  int64 id = 1;
+  bool auto_execute = 2;
+}
+
+message RejectControlActionRequest {
+  int64 id = 1;
+  string reason = 2;
+}
+
+message ExecuteControlActionRequest {
+  int64 id = 1;
+}
+
+message RollbackControlActionRequest {
+  int64 id = 1;
+}
+
+message WriteCredential {
+  int64 id = 1;
+  string name = 2;
+  string protocol = 3; // netconf / ssh
+  string username = 4;
+  int32 port = 5;
+  bool has_password = 6;
+  string nac_webhook_url = 7; // 可选: 准入联动回调地址(iMaster NCE / RADIUS)
+  int64 created_at = 8;
+}
+
+message SaveWriteCredentialRequest {
+  int64 id = 1;
+  string name = 2;
+  string protocol = 3;
+  string username = 4;
+  string password = 5;
+  int32 port = 6;
+  string nac_webhook_url = 7;
+}
+
+message ListWriteCredentialsReply {
+  repeated WriteCredential items = 1;
+}
+
+message DeleteWriteCredentialRequest {
+  int64 id = 1;
+}

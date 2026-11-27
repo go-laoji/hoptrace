@@ -27,6 +27,7 @@ func NewHTTPServer(
 	ep *service.EndpointService,
 	dash *service.DashboardService,
 	auth *service.AuthService,
+	ctrl *service.ControlService,
 ) *http.Server {
 	opts := []http.ServerOption{
 		http.Middleware(
@@ -56,6 +57,7 @@ func NewHTTPServer(
 	v1.RegisterEndpointServiceHTTPServer(srv, ep)
 	v1.RegisterDashboardServiceHTTPServer(srv, dash)
 	v1.RegisterAuthServiceHTTPServer(srv, auth)
+	v1.RegisterControlServiceHTTPServer(srv, ctrl)
 
 	// 若配置了前端构建目录(如 web/dist),由后端直接托管 SPA
 	if dir := strings.TrimSpace(c.GetStaticDir()); dir != "" {

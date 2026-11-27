@@ -110,4 +110,46 @@ func TestEndToEndDiscoveryWithHuaweiSim(t *testing.T) {
 			t.Errorf("endpoint %s missing ARP IP", e.MAC)
 		}
 	}
+
+	// 6. 验证管控护栏、审批流、执行与一键回滚闭环
+	ctrlRepo := NewControlRepo(d)
+	ctrlExec := NewControlExecutor(&conf.Collector{Simulate: true})
+	ctrlUC := biz.NewControlUsecase(ctrlRepo, devRepo, epRepo, ctrlExec)
+
+	// 6a. 保护名单: 禁止对核心交换机/防火墙执行 shutdown
+	devs, _ := devRepo.ListAll(ctx)
+	for _, dev := range devs {
+		if dev.Role == biz.RoleCore {
+			if _, err := ctrlUC.CreateAction(ctx, biz.CreateControlInput{
+				Action: biz.ActionShutdownPort, DeviceID: dev.ID, IfIndex: 1,
+			}); err != biz.ErrControlProtectedTarget {
+				t.Fatalf("expected ErrControlProtectedTarget on core switch, got %v", err)
+			}
+		}
+	}
+
+	// 6b. 封禁终端 -> 审批并执行 -> 自动标记 blocked -> 一键回滚 -> 恢复 unknown
+	target := eps[0]
+	act, err := ctrlUC.CreateAction(ctx, biz.CreateControlInput{
+		Action: biz.ActionBlockEndpoint, EndpointID: target.ID, Protocol: biz.ProtoSSH, Reason: "未知终端隔离测试",
+	})
+	if err != nil || act.Status != biz.ControlPending {
+		t.Fatalf("CreateAction failed: err=%v act=%+v", err, act)
+	}
+	act, err = ctrlUC.Approve(ctx, act.ID, true)
+	if err != nil || act.Status != biz.ControlExecuted {
+		t.Fatalf("Approve+Execute failed: err=%v act=%+v", err, act)
+	}
+	afterBlock, _ := epRepo.Get(ctx, target.ID)
+	if afterBlock.Trust != biz.TrustBlocked {
+		t.Fatalf("expected endpoint trust=blocked, got %s", afterBlock.Trust)
+	}
+	act, err = ctrlUC.Rollback(ctx, act.ID)
+	if err != nil || act.Status != biz.ControlRolledBack {
+		t.Fatalf("Rollback failed: err=%v act=%+v", err, act)
+	}
+	afterRB, _ := epRepo.Get(ctx, target.ID)
+	if afterRB.Trust != biz.TrustUnknown {
+		t.Fatalf("expected endpoint trust restored to unknown, got %s", afterRB.Trust)
+	}
 }

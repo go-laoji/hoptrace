@@ -41,6 +41,10 @@ const (
 	ErrorReason_INVALID_CREDENTIALS         ErrorReason = 14
 	ErrorReason_USER_NOT_FOUND              ErrorReason = 15
 	ErrorReason_USER_ALREADY_EXISTS         ErrorReason = 16
+	ErrorReason_CONTROL_NOT_FOUND           ErrorReason = 17
+	ErrorReason_CONTROL_PROTECTED_TARGET    ErrorReason = 18
+	ErrorReason_CONTROL_INVALID_STATE       ErrorReason = 19
+	ErrorReason_CONTROL_EXEC_FAILED         ErrorReason = 20
 )
 
 // Enum value maps for ErrorReason.
@@ -63,6 +67,10 @@ var (
 		14: "INVALID_CREDENTIALS",
 		15: "USER_NOT_FOUND",
 		16: "USER_ALREADY_EXISTS",
+		17: "CONTROL_NOT_FOUND",
+		18: "CONTROL_PROTECTED_TARGET",
+		19: "CONTROL_INVALID_STATE",
+		20: "CONTROL_EXEC_FAILED",
 	}
 	ErrorReason_value = map[string]int32{
 		"ERROR_REASON_UNSPECIFIED":    0,
@@ -82,6 +90,10 @@ var (
 		"INVALID_CREDENTIALS":         14,
 		"USER_NOT_FOUND":              15,
 		"USER_ALREADY_EXISTS":         16,
+		"CONTROL_NOT_FOUND":           17,
+		"CONTROL_PROTECTED_TARGET":    18,
+		"CONTROL_INVALID_STATE":       19,
+		"CONTROL_EXEC_FAILED":         20,
 	}
 )
 
@@ -116,7 +128,7 @@ var File_hoptrace_v1_error_reason_proto protoreflect.FileDescriptor
 
 const file_hoptrace_v1_error_reason_proto_rawDesc = "" +
 	"\n" +
-	"\x1ehoptrace/v1/error_reason.proto\x12\vhoptrace.v1*\xb6\x03\n" +
+	"\x1ehoptrace/v1/error_reason.proto\x12\vhoptrace.v1*\x9f\x04\n" +
 	"\vErrorReason\x12\x1c\n" +
 	"\x18ERROR_REASON_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10DEVICE_NOT_FOUND\x10\x01\x12\x1b\n" +
@@ -135,7 +147,11 @@ const file_hoptrace_v1_error_reason_proto_rawDesc = "" +
 	"\tFORBIDDEN\x10\r\x12\x17\n" +
 	"\x13INVALID_CREDENTIALS\x10\x0e\x12\x12\n" +
 	"\x0eUSER_NOT_FOUND\x10\x0f\x12\x17\n" +
-	"\x13USER_ALREADY_EXISTS\x10\x10B\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
+	"\x13USER_ALREADY_EXISTS\x10\x10\x12\x15\n" +
+	"\x11CONTROL_NOT_FOUND\x10\x11\x12\x1c\n" +
+	"\x18CONTROL_PROTECTED_TARGET\x10\x12\x12\x19\n" +
+	"\x15CONTROL_INVALID_STATE\x10\x13\x12\x17\n" +
+	"\x13CONTROL_EXEC_FAILED\x10\x14B\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
 
 var (
 	file_hoptrace_v1_error_reason_proto_rawDescOnce sync.Once
