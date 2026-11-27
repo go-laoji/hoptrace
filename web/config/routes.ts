@@ -1,5 +1,10 @@
 export default [
   {
+    path: '/login',
+    layout: false,
+    component: './hoptrace/Login',
+  },
+  {
     path: '/dashboard',
     name: '总览仪表盘',
     icon: 'DashboardOutlined',
@@ -28,6 +33,13 @@ export default [
     name: '发现与凭据',
     icon: 'RadarChartOutlined',
     component: './hoptrace/Discovery',
+  },
+  {
+    path: '/users',
+    name: '用户与权限',
+    icon: 'TeamOutlined',
+    access: 'isAdmin',
+    component: './hoptrace/Users',
   },
   {
     path: '/',

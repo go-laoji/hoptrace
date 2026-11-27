@@ -1,11 +1,9 @@
-/**
- * @see https://umijs.org/docs/max/access#access
- * */
-export default function access(
-  initialState: { currentUser?: API.CurrentUser } | undefined,
-) {
-  const { currentUser } = initialState ?? {};
+import type { AuthUser } from '@/services/hoptrace';
+
+export default function access(initialState: { currentUser?: AuthUser } | undefined) {
+  const role = initialState?.currentUser?.role;
   return {
-    canAdmin: currentUser && currentUser.access === 'admin',
+    isAdmin: role === 'admin',
+    canWrite: role === 'admin' || role === 'operator',
   };
 }

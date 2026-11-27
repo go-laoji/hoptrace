@@ -21,10 +21,20 @@ function mapKeys(val: any, fn: (k: string) => string): any {
   return val;
 }
 
+const TOKEN_KEY = 'hoptrace_token';
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
+export const setToken = (tok: string) => localStorage.setItem(TOKEN_KEY, tok);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
 async function request<T = any>(url: string, opts?: Record<string, any>): Promise<T> {
-  const next = opts ? { ...opts } : undefined;
-  if (next?.params) next.params = mapKeys(next.params, toSnakeKey);
-  if (next?.data) next.data = mapKeys(next.data, toSnakeKey);
+  const next: Record<string, any> = opts ? { ...opts } : {};
+  if (next.params) next.params = mapKeys(next.params, toSnakeKey);
+  if (next.data) next.data = mapKeys(next.data, toSnakeKey);
+  const tok = getToken();
+  if (tok) {
+    next.headers = { ...(next.headers || {}), Authorization: `Bearer ${tok}` };
+  }
   const res = await umiRequest(url, next);
   return mapKeys(res, toCamelKey) as T;
 }
@@ -317,3 +327,39 @@ export const listEvents = (params: {
   page?: number;
   pageSize?: number;
 }) => request<{ items: EndpointEvent[]; total: string }>('/api/v1/events', { params });
+
+// ---------- 鉴权与用户 ----------
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  displayName: string;
+  role: 'admin' | 'operator' | 'viewer';
+  createdAt: string;
+}
+
+export const login = (data: { username: string; password: string }) =>
+  request<{ token: string; expiresAt: string; user: AuthUser }>('/api/v1/auth/login', {
+    method: 'POST',
+    data,
+  });
+
+export const getCurrentUser = () =>
+  request<{ authEnabled: boolean; user?: AuthUser }>('/api/v1/auth/me', {
+    skipErrorHandler: true,
+  });
+
+export const changePassword = (data: { oldPassword: string; newPassword: string }) =>
+  request('/api/v1/auth/password', { method: 'POST', data });
+
+export const listUsers = () => request<{ items: AuthUser[] }>('/api/v1/users');
+
+export const createUser = (data: {
+  username: string;
+  password: string;
+  displayName?: string;
+  role: string;
+}) => request<AuthUser>('/api/v1/users', { method: 'POST', data });
+
+export const deleteUser = (id: string) =>
+  request(`/api/v1/users/${id}`, { method: 'DELETE' });
