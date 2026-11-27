@@ -1,0 +1,1004 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: ""
+    version: 0.0.1
+paths:
+    /api/v1/credentials:
+        get:
+            tags:
+                - CredentialService
+            operationId: CredentialService_ListCredentials
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListCredentialsReply'
+        post:
+            tags:
+                - CredentialService
+            operationId: CredentialService_CreateCredential
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.SaveCredentialRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Credential'
+    /api/v1/credentials/{id}:
+        put:
+            tags:
+                - CredentialService
+            operationId: CredentialService_UpdateCredential
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.SaveCredentialRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Credential'
+        delete:
+            tags:
+                - CredentialService
+            operationId: CredentialService_DeleteCredential
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /api/v1/dashboard:
+        get:
+            tags:
+                - DashboardService
+            operationId: DashboardService_GetDashboard
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Dashboard'
+    /api/v1/devices:
+        get:
+            tags:
+                - DeviceService
+            operationId: DeviceService_ListDevices
+            parameters:
+                - name: keyword
+                  in: query
+                  schema:
+                    type: string
+                - name: status
+                  in: query
+                  schema:
+                    type: string
+                - name: family
+                  in: query
+                  schema:
+                    type: string
+                - name: role
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListDevicesReply'
+        post:
+            tags:
+                - DeviceService
+            operationId: DeviceService_CreateDevice
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.CreateDeviceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Device'
+    /api/v1/devices/{deviceId}/interfaces:
+        get:
+            tags:
+                - DeviceService
+            operationId: DeviceService_ListInterfaces
+            parameters:
+                - name: deviceId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListInterfacesReply'
+    /api/v1/devices/{id}:
+        get:
+            tags:
+                - DeviceService
+            operationId: DeviceService_GetDevice
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Device'
+        put:
+            tags:
+                - DeviceService
+            operationId: DeviceService_UpdateDevice
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.UpdateDeviceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Device'
+        delete:
+            tags:
+                - DeviceService
+            operationId: DeviceService_DeleteDevice
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /api/v1/devices/{id}/poll:
+        post:
+            tags:
+                - DeviceService
+            operationId: DeviceService_PollDevice
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.PollDeviceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Device'
+    /api/v1/discovery/jobs:
+        get:
+            tags:
+                - DiscoveryService
+            operationId: DiscoveryService_ListJobs
+            parameters:
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListJobsReply'
+        post:
+            tags:
+                - DiscoveryService
+            operationId: DiscoveryService_StartDiscovery
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.StartDiscoveryRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.DiscoveryJob'
+    /api/v1/discovery/jobs/{id}:
+        get:
+            tags:
+                - DiscoveryService
+            operationId: DiscoveryService_GetJob
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.DiscoveryJob'
+    /api/v1/endpoints:
+        get:
+            tags:
+                - EndpointService
+            operationId: EndpointService_ListEndpoints
+            parameters:
+                - name: keyword
+                  in: query
+                  schema:
+                    type: string
+                - name: status
+                  in: query
+                  schema:
+                    type: string
+                - name: trust
+                  in: query
+                  schema:
+                    type: string
+                - name: type
+                  in: query
+                  schema:
+                    type: string
+                - name: deviceId
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListEndpointsReply'
+    /api/v1/endpoints/{id}:
+        get:
+            tags:
+                - EndpointService
+            operationId: EndpointService_GetEndpoint
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.EndpointDetail'
+        put:
+            tags:
+                - EndpointService
+            operationId: EndpointService_UpdateEndpoint
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.UpdateEndpointRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Endpoint'
+        delete:
+            tags:
+                - EndpointService
+            operationId: EndpointService_DeleteEndpoint
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /api/v1/events:
+        get:
+            tags:
+                - EndpointService
+            operationId: EndpointService_ListEvents
+            parameters:
+                - name: endpointId
+                  in: query
+                  schema:
+                    type: string
+                - name: type
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListEventsReply'
+    /api/v1/topology:
+        get:
+            tags:
+                - TopologyService
+            operationId: TopologyService_GetTopology
+            parameters:
+                - name: expandDeviceIds
+                  in: query
+                  description: 展开这些设备下的接入终端
+                  schema:
+                    type: array
+                    items:
+                        type: string
+                - name: includeAllEndpoints
+                  in: query
+                  description: 展开全部设备的终端(终端较多时慎用)
+                  schema:
+                    type: boolean
+                - name: site
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Topology'
+    /api/v1/topology/rebuild:
+        post:
+            tags:
+                - TopologyService
+            description: 手动触发拓扑重建与终端同步
+            operationId: TopologyService_Rebuild
+            requestBody:
+                content:
+                    application/json: {}
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+components:
+    schemas:
+        hoptrace.v1.CreateDeviceRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                mgmtIp:
+                    type: string
+                snmpPort:
+                    type: integer
+                    format: int32
+                credentialId:
+                    type: string
+                site:
+                    type: string
+                location:
+                    type: string
+        hoptrace.v1.Credential:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                version:
+                    type: string
+                username:
+                    type: string
+                authProtocol:
+                    type: string
+                privProtocol:
+                    type: string
+                port:
+                    type: integer
+                    format: int32
+                hasCommunity:
+                    type: boolean
+                hasAuthPassword:
+                    type: boolean
+                hasPrivPassword:
+                    type: boolean
+                createdAt:
+                    type: string
+        hoptrace.v1.Dashboard:
+            type: object
+            properties:
+                devicesTotal:
+                    type: string
+                devicesOnline:
+                    type: string
+                devicesOffline:
+                    type: string
+                devicesUnmanaged:
+                    type: string
+                linksTotal:
+                    type: string
+                linksDown:
+                    type: string
+                linksStale:
+                    type: string
+                endpointsTotal:
+                    type: string
+                endpointsOnline:
+                    type: string
+                endpointsNew24h:
+                    type: string
+                endpointsUntrusted:
+                    type: string
+                devicesByRole:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.KV'
+                endpointsByType:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.KV'
+                recentEvents:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.EndpointEvent'
+        hoptrace.v1.Device:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                mgmtIp:
+                    type: string
+                snmpPort:
+                    type: integer
+                    format: int32
+                credentialId:
+                    type: string
+                managed:
+                    type: boolean
+                sysName:
+                    type: string
+                sysDescr:
+                    type: string
+                sysOid:
+                    type: string
+                vendor:
+                    type: string
+                family:
+                    type: string
+                model:
+                    type: string
+                osVersion:
+                    type: string
+                serial:
+                    type: string
+                role:
+                    type: string
+                roleManual:
+                    type: boolean
+                status:
+                    type: string
+                site:
+                    type: string
+                location:
+                    type: string
+                ips:
+                    type: array
+                    items:
+                        type: string
+                chassisMac:
+                    type: string
+                cpuUsage:
+                    type: integer
+                    format: int32
+                memUsage:
+                    type: integer
+                    format: int32
+                temperature:
+                    type: integer
+                    format: int32
+                stackMembers:
+                    type: integer
+                    format: int32
+                uptimeSeconds:
+                    type: string
+                lastPollAt:
+                    type: string
+                lastError:
+                    type: string
+                createdAt:
+                    type: string
+                interfaceCount:
+                    type: integer
+                    format: int32
+                endpointCount:
+                    type: integer
+                    format: int32
+        hoptrace.v1.DiscoveryJob:
+            type: object
+            properties:
+                id:
+                    type: string
+                status:
+                    type: string
+                seeds:
+                    type: array
+                    items:
+                        type: string
+                cidrs:
+                    type: array
+                    items:
+                        type: string
+                probed:
+                    type: integer
+                    format: int32
+                total:
+                    type: integer
+                    format: int32
+                found:
+                    type: integer
+                    format: int32
+                log:
+                    type: string
+                startedAt:
+                    type: string
+                finishedAt:
+                    type: string
+        hoptrace.v1.Endpoint:
+            type: object
+            properties:
+                id:
+                    type: string
+                mac:
+                    type: string
+                ip:
+                    type: string
+                ips:
+                    type: array
+                    items:
+                        type: string
+                vendor:
+                    type: string
+                type:
+                    type: string
+                typeManual:
+                    type: boolean
+                name:
+                    type: string
+                owner:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+                status:
+                    type: string
+                trust:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+                ifIndex:
+                    type: integer
+                    format: int32
+                ifName:
+                    type: string
+                vlan:
+                    type: integer
+                    format: int32
+                firstSeen:
+                    type: string
+                lastSeen:
+                    type: string
+                remark:
+                    type: string
+        hoptrace.v1.EndpointDetail:
+            type: object
+            properties:
+                endpoint:
+                    $ref: '#/components/schemas/hoptrace.v1.Endpoint'
+                locations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.EndpointLocation'
+                events:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.EndpointEvent'
+        hoptrace.v1.EndpointEvent:
+            type: object
+            properties:
+                id:
+                    type: string
+                endpointId:
+                    type: string
+                mac:
+                    type: string
+                ip:
+                    type: string
+                name:
+                    type: string
+                type:
+                    type: string
+                detail:
+                    type: string
+                at:
+                    type: string
+        hoptrace.v1.EndpointLocation:
+            type: object
+            properties:
+                id:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+                ifIndex:
+                    type: integer
+                    format: int32
+                ifName:
+                    type: string
+                vlan:
+                    type: integer
+                    format: int32
+                since:
+                    type: string
+                until:
+                    type: string
+        hoptrace.v1.Interface:
+            type: object
+            properties:
+                id:
+                    type: string
+                deviceId:
+                    type: string
+                ifIndex:
+                    type: integer
+                    format: int32
+                name:
+                    type: string
+                descr:
+                    type: string
+                alias:
+                    type: string
+                speedMbps:
+                    type: string
+                adminStatus:
+                    type: string
+                operStatus:
+                    type: string
+                mac:
+                    type: string
+                kind:
+                    type: string
+                aggIfIndex:
+                    type: integer
+                    format: int32
+                macCount:
+                    type: integer
+                    format: int32
+                neighbor:
+                    type: string
+        hoptrace.v1.KV:
+            type: object
+            properties:
+                name:
+                    type: string
+                value:
+                    type: string
+        hoptrace.v1.ListCredentialsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.Credential'
+        hoptrace.v1.ListDevicesReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.Device'
+                total:
+                    type: string
+        hoptrace.v1.ListEndpointsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.Endpoint'
+                total:
+                    type: string
+        hoptrace.v1.ListEventsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.EndpointEvent'
+                total:
+                    type: string
+        hoptrace.v1.ListInterfacesReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.Interface'
+        hoptrace.v1.ListJobsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.DiscoveryJob'
+        hoptrace.v1.PollDeviceRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+        hoptrace.v1.SaveCredentialRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                version:
+                    type: string
+                community:
+                    type: string
+                username:
+                    type: string
+                authProtocol:
+                    type: string
+                authPassword:
+                    type: string
+                privProtocol:
+                    type: string
+                privPassword:
+                    type: string
+                port:
+                    type: integer
+                    format: int32
+        hoptrace.v1.StartDiscoveryRequest:
+            type: object
+            properties:
+                seeds:
+                    type: array
+                    items:
+                        type: string
+                cidrs:
+                    type: array
+                    items:
+                        type: string
+                credentialIds:
+                    type: array
+                    items:
+                        type: string
+                expandNeighbors:
+                    type: boolean
+                maxDevices:
+                    type: integer
+                    format: int32
+                site:
+                    type: string
+        hoptrace.v1.TopoLink:
+            type: object
+            properties:
+                id:
+                    type: string
+                source:
+                    type: string
+                target:
+                    type: string
+                sourcePort:
+                    type: string
+                targetPort:
+                    type: string
+                kind:
+                    type: string
+                confidence:
+                    type: number
+                    format: double
+                status:
+                    type: string
+                members:
+                    type: array
+                    items:
+                        type: string
+        hoptrace.v1.TopoNode:
+            type: object
+            properties:
+                id:
+                    type: string
+                kind:
+                    type: string
+                refId:
+                    type: string
+                name:
+                    type: string
+                ip:
+                    type: string
+                role:
+                    type: string
+                family:
+                    type: string
+                status:
+                    type: string
+                vendor:
+                    type: string
+                model:
+                    type: string
+                type:
+                    type: string
+                managed:
+                    type: boolean
+                endpointCount:
+                    type: integer
+                    format: int32
+        hoptrace.v1.Topology:
+            type: object
+            properties:
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.TopoNode'
+                links:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.TopoLink'
+        hoptrace.v1.UpdateDeviceRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                credentialId:
+                    type: string
+                role:
+                    type: string
+                site:
+                    type: string
+                location:
+                    type: string
+        hoptrace.v1.UpdateEndpointRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                owner:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+                trust:
+                    type: string
+                type:
+                    type: string
+                remark:
+                    type: string
+tags:
+    - name: CredentialService
+      description: CredentialService SNMP 凭据管理(密文字段不会回显)
+    - name: DashboardService
+      description: DashboardService 仪表盘统计
+    - name: DeviceService
+      description: DeviceService 设备管理
+    - name: DiscoveryService
+      description: DiscoveryService 设备发现任务
+    - name: EndpointService
+      description: EndpointService 终端管理
+    - name: TopologyService
+      description: TopologyService 拓扑查询

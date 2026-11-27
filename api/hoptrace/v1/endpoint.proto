@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// EndpointService 终端管理
+service EndpointService {
+  rpc ListEndpoints(ListEndpointsRequest) returns (ListEndpointsReply) {
+    option (google.api.http) = {get: "/api/v1/endpoints"};
+  }
+  rpc GetEndpoint(GetEndpointRequest) returns (EndpointDetail) {
+    option (google.api.http) = {get: "/api/v1/endpoints/{id}"};
+  }
+  rpc UpdateEndpoint(UpdateEndpointRequest) returns (Endpoint) {
+    option (google.api.http) = {
+      put: "/api/v1/endpoints/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteEndpoint(DeleteEndpointRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/endpoints/{id}"};
+  }
+  rpc ListEvents(ListEventsRequest) returns (ListEventsReply) {
+    option (google.api.http) = {get: "/api/v1/events"};
+  }
+}
+
+message Endpoint {
+  int64 id = 1;
+  string mac = 2;
+  string ip = 3;
+  repeated string ips = 4;
+  string vendor = 5;
+  string type = 6; // pc / phone / ap / camera / printer / server / mobile / iot / unknown
+  bool type_manual = 7;
+  string name = 8;
+  string owner = 9;
+  repeated string tags = 10;
+  string status = 11; // online / offline
+  string trust = 12; // unknown / trusted / blocked
+  int64 device_id = 13;
+  string device_name = 14;
+  int32 if_index = 15;
+  string if_name = 16;
+  int32 vlan = 17;
+  int64 first_seen = 18;
+  int64 last_seen = 19;
+  string remark = 20;
+}
+
+message EndpointLocation {
+  int64 id = 1;
+  int64 device_id = 2;
+  string device_name = 3;
+  int32 if_index = 4;
+  string if_name = 5;
+  int32 vlan = 6;
+  int64 since = 7;
+  int64 until = 8; // 0 表示当前位置
+}
+
+message EndpointEvent {
+  int64 id = 1;
+  int64 endpoint_id = 2;
+  string mac = 3;
+  string ip = 4;
+  string name = 5;
+  string type = 6; // new / online / offline / moved / ip_changed
+  string detail = 7;
+  int64 at = 8;
+}
+
+message EndpointDetail {
+  Endpoint endpoint = 1;
+  repeated EndpointLocation locations = 2;
+  repeated EndpointEvent events = 3;
+}
+
+message ListEndpointsRequest {
+  string keyword = 1; // MAC / IP / 名称 / 厂商 / 责任人
+  string status = 2;
+  string trust = 3;
+  string type = 4;
+  int64 device_id = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+}
+message ListEndpointsReply {
+  repeated Endpoint items = 1;
+  int64 total = 2;
+}
+message GetEndpointRequest {
+  int64 id = 1;
+}
+message UpdateEndpointRequest {
+  int64 id = 1;
+  string name = 2;
+  string owner = 3;
+  repeated string tags = 4;
+  string trust = 5;
+  string type = 6; // 为空则恢复自动识别
+  string remark = 7;
+}
+message DeleteEndpointRequest {
+  int64 id = 1;
+}
+message ListEventsRequest {
+  int64 endpoint_id = 1;
+  string type = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+message ListEventsReply {
+  repeated EndpointEvent items = 1;
+  int64 total = 2;
+}

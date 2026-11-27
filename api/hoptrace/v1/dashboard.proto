@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "hoptrace/v1/endpoint.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// DashboardService 仪表盘统计
+service DashboardService {
+  rpc GetDashboard(google.protobuf.Empty) returns (Dashboard) {
+    option (google.api.http) = {get: "/api/v1/dashboard"};
+  }
+}
+
+message KV {
+  string name = 1;
+  int64 value = 2;
+}
+
+message Dashboard {
+  int64 devices_total = 1;
+  int64 devices_online = 2;
+  int64 devices_offline = 3;
+  int64 devices_unmanaged = 4;
+  int64 links_total = 5;
+  int64 links_down = 6;
+  int64 links_stale = 7;
+  int64 endpoints_total = 8;
+  int64 endpoints_online = 9;
+  int64 endpoints_new_24h = 10;
+  int64 endpoints_untrusted = 11;
+  repeated KV devices_by_role = 12;
+  repeated KV endpoints_by_type = 13;
+  repeated EndpointEvent recent_events = 14;
+}

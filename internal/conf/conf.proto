@@ -1,0 +1,71 @@
+syntax = "proto3";
+package kratos.api;
+
+option go_package = "hoptrace/internal/conf;conf";
+
+import "google/protobuf/duration.proto";
+
+message Bootstrap {
+  Server server = 1;
+  Data data = 2;
+  Collector collector = 3;
+  Security security = 4;
+}
+
+message Server {
+  message HTTP {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  message GRPC {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  HTTP http = 1;
+  GRPC grpc = 2;
+  // 前端静态资源目录(web/dist),为空则不托管
+  string static_dir = 3;
+}
+
+message Data {
+  message Database {
+    // sqlite / postgres
+    string driver = 1;
+    // sqlite: 文件路径;postgres: DSN
+    string source = 2;
+    // 打印全部 SQL,仅开发环境
+    bool debug = 3;
+    // 启动时 AutoMigrate;生产环境建议改为独立评审的迁移步骤
+    bool auto_migrate = 4;
+  }
+  Database database = 1;
+}
+
+message Collector {
+  // 设备轮询周期
+  google.protobuf.Duration poll_interval = 1;
+  // 全局采集并发
+  int32 concurrency = 2;
+  // SNMP 单次请求超时
+  google.protobuf.Duration timeout = 3;
+  int32 retries = 4;
+  // GetBulk max-repetitions
+  int32 max_repetitions = 5;
+  // 使用内置华为风格模拟网络(10.255.0.0/24),无真机时联调用
+  bool simulate = 6;
+  // 关闭后台自动轮询
+  bool disable_poller = 7;
+  // 无邻居端口 MAC 数超过该值视为疑似私接
+  int32 suspect_mac_threshold = 8;
+  // 连续未见 N 轮判定下线
+  int32 offline_miss_rounds = 9;
+  // 连续 N 轮出现在新位置才确认漂移
+  int32 move_confirm_rounds = 10;
+}
+
+message Security {
+  // 凭据加密主密钥,生产环境请通过环境变量注入,勿提交到仓库
+  string secret_key = 1;
+}

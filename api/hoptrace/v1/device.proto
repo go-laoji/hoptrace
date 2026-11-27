@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// DeviceService 设备管理
+service DeviceService {
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesReply) {
+    option (google.api.http) = {get: "/api/v1/devices"};
+  }
+  rpc GetDevice(GetDeviceRequest) returns (Device) {
+    option (google.api.http) = {get: "/api/v1/devices/{id}"};
+  }
+  rpc CreateDevice(CreateDeviceRequest) returns (Device) {
+    option (google.api.http) = {
+      post: "/api/v1/devices"
+      body: "*"
+    };
+  }
+  rpc UpdateDevice(UpdateDeviceRequest) returns (Device) {
+    option (google.api.http) = {
+      put: "/api/v1/devices/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteDevice(DeleteDeviceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/devices/{id}"};
+  }
+  rpc PollDevice(PollDeviceRequest) returns (Device) {
+    option (google.api.http) = {
+      post: "/api/v1/devices/{id}/poll"
+      body: "*"
+    };
+  }
+  rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesReply) {
+    option (google.api.http) = {get: "/api/v1/devices/{device_id}/interfaces"};
+  }
+}
+
+message Device {
+  int64 id = 1;
+  string name = 2;
+  string mgmt_ip = 3;
+  int32 snmp_port = 4;
+  int64 credential_id = 5;
+  bool managed = 6; // false: 仅通过 LLDP 发现的占位设备,无法 SNMP 纳管
+  string sys_name = 7;
+  string sys_descr = 8;
+  string sys_oid = 9;
+  string vendor = 10;
+  string family = 11; // switch / firewall / router / wlan-ac / unknown
+  string model = 12;
+  string os_version = 13;
+  string serial = 14;
+  string role = 15; // core / aggregation / access / firewall / router / ac / unknown
+  bool role_manual = 16;
+  string status = 17; // online / offline / unknown
+  string site = 18;
+  string location = 19;
+  repeated string ips = 20;
+  string chassis_mac = 21;
+  int32 cpu_usage = 22;
+  int32 mem_usage = 23;
+  int32 temperature = 24;
+  int32 stack_members = 25;
+  int64 uptime_seconds = 26;
+  int64 last_poll_at = 27;
+  string last_error = 28;
+  int64 created_at = 29;
+  int32 interface_count = 30;
+  int32 endpoint_count = 31;
+}
+
+message ListDevicesRequest {
+  string keyword = 1;
+  string status = 2;
+  string family = 3;
+  string role = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+message ListDevicesReply {
+  repeated Device items = 1;
+  int64 total = 2;
+}
+message GetDeviceRequest {
+  int64 id = 1;
+}
+message CreateDeviceRequest {
+  string name = 1;
+  string mgmt_ip = 2;
+  int32 snmp_port = 3;
+  int64 credential_id = 4;
+  string site = 5;
+  string location = 6;
+}
+message UpdateDeviceRequest {
+  int64 id = 1;
+  string name = 2;
+  int64 credential_id = 3;
+  string role = 4; // 为空则恢复自动判定
+  string site = 5;
+  string location = 6;
+}
+message DeleteDeviceRequest {
+  int64 id = 1;
+}
+message PollDeviceRequest {
+  int64 id = 1;
+}
+
+message Interface {
+  int64 id = 1;
+  int64 device_id = 2;
+  int32 if_index = 3;
+  string name = 4;
+  string descr = 5;
+  string alias = 6;
+  int64 speed_mbps = 7;
+  string admin_status = 8;
+  string oper_status = 9;
+  string mac = 10;
+  string kind = 11; // uplink / edge / suspect / lag / lag_member
+  int32 agg_if_index = 12;
+  int32 mac_count = 13;
+  string neighbor = 14; // 对端描述
+}
+message ListInterfacesRequest {
+  int64 device_id = 1;
+}
+message ListInterfacesReply {
+  repeated Interface items = 1;
+}

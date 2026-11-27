@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// DiscoveryService 设备发现任务
+service DiscoveryService {
+  rpc StartDiscovery(StartDiscoveryRequest) returns (DiscoveryJob) {
+    option (google.api.http) = {
+      post: "/api/v1/discovery/jobs"
+      body: "*"
+    };
+  }
+  rpc ListJobs(ListJobsRequest) returns (ListJobsReply) {
+    option (google.api.http) = {get: "/api/v1/discovery/jobs"};
+  }
+  rpc GetJob(GetJobRequest) returns (DiscoveryJob) {
+    option (google.api.http) = {get: "/api/v1/discovery/jobs/{id}"};
+  }
+}
+
+message StartDiscoveryRequest {
+  repeated string seeds = 1; // 种子设备 IP
+  repeated string cidrs = 2; // 待扫描网段
+  repeated int64 credential_ids = 3; // 为空使用全部凭据
+  bool expand_neighbors = 4; // 通过 LLDP 邻居继续扩散
+  int32 max_devices = 5; // 最大发现数量,0 使用默认
+  string site = 6;
+}
+
+message DiscoveryJob {
+  int64 id = 1;
+  string status = 2; // running / done / failed
+  repeated string seeds = 3;
+  repeated string cidrs = 4;
+  int32 probed = 5;
+  int32 total = 6;
+  int32 found = 7;
+  string log = 8;
+  int64 started_at = 9;
+  int64 finished_at = 10;
+}
+
+message ListJobsRequest {
+  int32 limit = 1;
+}
+message ListJobsReply {
+  repeated DiscoveryJob items = 1;
+}
+message GetJobRequest {
+  int64 id = 1;
+}

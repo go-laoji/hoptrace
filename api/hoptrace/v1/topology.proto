@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// TopologyService 拓扑查询
+service TopologyService {
+  rpc GetTopology(GetTopologyRequest) returns (Topology) {
+    option (google.api.http) = {get: "/api/v1/topology"};
+  }
+  // 手动触发拓扑重建与终端同步
+  rpc Rebuild(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/topology/rebuild"
+      body: "*"
+    };
+  }
+}
+
+message GetTopologyRequest {
+  // 展开这些设备下的接入终端
+  repeated int64 expand_device_ids = 1;
+  // 展开全部设备的终端(终端较多时慎用)
+  bool include_all_endpoints = 2;
+  string site = 3;
+}
+
+message TopoNode {
+  string id = 1; // d<ID> 设备 / e<ID> 终端
+  string kind = 2; // device / endpoint
+  int64 ref_id = 3;
+  string name = 4;
+  string ip = 5;
+  string role = 6;
+  string family = 7;
+  string status = 8;
+  string vendor = 9;
+  string model = 10;
+  string type = 11; // 终端类型
+  bool managed = 12;
+  int32 endpoint_count = 13;
+}
+
+message TopoLink {
+  string id = 1;
+  string source = 2;
+  string target = 3;
+  string source_port = 4;
+  string target_port = 5;
+  string kind = 6; // lldp / access
+  double confidence = 7;
+  string status = 8; // up / down / stale
+  repeated string members = 9;
+}
+
+message Topology {
+  repeated TopoNode nodes = 1;
+  repeated TopoLink links = 2;
+}

@@ -1,0 +1,35 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 30s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 30s
+  # 前端构建完成后可填写 web/dist 由后端直接托管
+  static_dir: web/dist
+
+data:
+  database:
+    # 开发/演示使用 sqlite; 生产环境改为 postgres 并通过环境变量注入 DSN
+    driver: ${DATABASE_DRIVER:sqlite}
+    source: ${DATABASE_SOURCE:data/hoptrace.db}
+    debug: false
+    auto_migrate: true
+
+collector:
+  poll_interval: 300s
+  concurrency: 20
+  timeout: 3s
+  retries: 1
+  max_repetitions: 25
+  # true: 使用内置华为风格模拟网络(10.255.0.0/24), 方便无真机联调
+  # false: 使用真实 SNMP(gosnmp) 采集现网设备
+  simulate: true
+  disable_poller: false
+  suspect_mac_threshold: 30
+  offline_miss_rounds: 2
+  move_confirm_rounds: 2
+
+security:
+  # 生产环境请通过 HOPTRACE_SECURITY_SECRET_KEY 环境变量注入
+  secret_key: ${SECURITY_SECRET_KEY:hoptrace-dev-secret-change-me}
