@@ -93,8 +93,8 @@ const TopologyPage: React.FC = () => {
         includeAllEndpoints,
         expandDeviceIds: includeAllEndpoints ? [] : expandedDeviceIds,
       });
-      // 默认隐藏已失效的 stale 链路，避免与活跃链路重叠造成视觉杂乱
-      const activeLinks = (res.links || []).filter((l) => l.status !== 'stale');
+      // 仅隐藏设备间已失效的 stale 链路；接入终端连线(kind=access)即使是离线(stale)也保留虚线显示，避免终端悬空无连线
+      const activeLinks = (res.links || []).filter((l) => l.kind === 'access' || l.status !== 'stale');
       setTopo({ nodes: res.nodes || [], links: activeLinks });
     } finally {
       setLoading(false);
@@ -140,7 +140,9 @@ const TopologyPage: React.FC = () => {
     const linkMap = new Map(visibleLinks.map((l) => [l.id, l]));
     const traceNodeSet = new Set(traceResult?.found ? traceResult.nodeIds || [] : []);
     const traceLinkSet = new Set(traceResult?.found ? traceResult.linkIds || [] : []);
+    const hasEndpoints = visibleNodes.some((n) => n.kind === 'endpoint');
     const hasSavedLayout =
+      !hasEndpoints &&
       visibleNodes.filter((n) => n.kind === 'device').length > 0 &&
       visibleNodes.filter((n) => n.kind === 'device').every((n) => n.hasPos);
 
@@ -220,6 +222,7 @@ const TopologyPage: React.FC = () => {
       const isLag = (l.members || []).length > 1;
       const isAccess = l.kind === 'access';
       const isDown = l.status === 'down';
+      const isOfflineAccess = isAccess && l.status === 'stale';
       const inTrace = traceLinkSet.has(l.id);
       const util = l.utilizationPct || 0;
       const stroke = inTrace
@@ -228,11 +231,13 @@ const TopologyPage: React.FC = () => {
           ? '#ff4d4f'
           : util >= 70
             ? '#fa8c16'
-            : isAccess
-              ? '#95de64'
-              : isLag
-                ? '#722ed1'
-                : '#91caff';
+            : isOfflineAccess
+              ? '#bfbfbf'
+              : isAccess
+                ? '#95de64'
+                : isLag
+                  ? '#722ed1'
+                  : '#91caff';
       return {
         id: l.id,
         source: l.source,
