@@ -145,6 +145,7 @@ const TopologyPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [layoutType, setLayoutType] = useState<'dagre' | 'force' | 'concentric'>('dagre');
+  const [useSavedLayout, setUseSavedLayout] = useState(true);
   const [includeAllEndpoints, setIncludeAllEndpoints] = useState(false);
   const [expandedDeviceIds, setExpandedDeviceIds] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -227,6 +228,7 @@ const TopologyPage: React.FC = () => {
     const traceLinkSet = new Set(traceResult?.found ? traceResult.linkIds || [] : []);
     const hasEndpoints = visibleNodes.some((n) => n.kind === 'endpoint');
     const hasSavedLayout =
+      useSavedLayout &&
       !hasEndpoints &&
       visibleNodes.filter((n) => n.kind === 'device').length > 0 &&
       visibleNodes.filter((n) => n.kind === 'device').every((n) => n.hasPos);
@@ -542,7 +544,7 @@ const TopologyPage: React.FC = () => {
       graph.destroy();
       graphRef.current = null;
     };
-  }, [topo, layoutType, roleFilter, traceResult, relayoutSeed, includeAllEndpoints]);
+  }, [topo, layoutType, useSavedLayout, roleFilter, traceResult, relayoutSeed, includeAllEndpoints]);
 
   const handleSaveLayout = async () => {
     if (!graphRef.current) return;
@@ -558,12 +560,14 @@ const TopologyPage: React.FC = () => {
     }
     if (positions.length === 0) return;
     await saveTopologyLayout(positions);
+    setUseSavedLayout(true);
     message.success(`已保存 ${positions.length} 个节点的自定义位置`);
     fetchTopology();
   };
 
   const handleResetLayout = async () => {
     await resetTopologyLayout();
+    setUseSavedLayout(false);
     message.success('已重置为自动布局');
     fetchTopology();
   };
@@ -631,6 +635,11 @@ const TopologyPage: React.FC = () => {
     setRelayoutSeed((s) => s + 1);
   };
 
+  const deviceNodes = topo.nodes.filter((n) => n.kind === 'device');
+  const dbHasSavedLayout = deviceNodes.length > 0 && deviceNodes.every((n) => n.hasPos);
+  const showingSavedLayout =
+    useSavedLayout && dbHasSavedLayout && !includeAllEndpoints && expandedDeviceIds.length === 0;
+
   return (
     <PageContainer
       title="网络拓扑"
@@ -676,9 +685,18 @@ const TopologyPage: React.FC = () => {
         </Button>,
         <Segmented
           key="layout"
-          value={layoutType}
-          onChange={(v) => setLayoutType(v as any)}
+          value={showingSavedLayout ? 'saved' : layoutType}
+          onChange={(v) => {
+            if (v === 'saved') {
+              setUseSavedLayout(true);
+            } else {
+              setUseSavedLayout(false);
+              setLayoutType(v as 'dagre' | 'force' | 'concentric');
+              setRelayoutSeed((s) => s + 1);
+            }
+          }}
           options={[
+            ...(dbHasSavedLayout ? [{ label: '已保存', value: 'saved' }] : []),
             { label: '层次', value: 'dagre' },
             { label: '力导向', value: 'force' },
             { label: '同心圆', value: 'concentric' },
@@ -697,7 +715,14 @@ const TopologyPage: React.FC = () => {
         <Button key="png" icon={<CameraOutlined />} onClick={handleExportPng}>
           导出 PNG
         </Button>,
-        <Button key="redraw" icon={<ApartmentOutlined />} onClick={() => setRelayoutSeed((s) => s + 1)}>
+        <Button
+          key="redraw"
+          icon={<ApartmentOutlined />}
+          onClick={() => {
+            setUseSavedLayout(false);
+            setRelayoutSeed((s) => s + 1);
+          }}
+        >
           重绘
         </Button>,
         <Button key="fit" icon={<ExpandOutlined />} onClick={() => graphRef.current?.fitView()} />,
