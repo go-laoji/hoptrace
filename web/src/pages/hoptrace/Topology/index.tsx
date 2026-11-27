@@ -29,15 +29,30 @@ import {
 } from '@/services/hoptrace';
 import { ENDPOINT_TYPE_META, ROLE_META, STATUS_META } from '../constants';
 
-const ROLE_COLOR: Record<string, string> = {
-  firewall: '#fa541c',
-  core: '#722ed1',
-  aggregation: '#2f54eb',
-  access: '#1677ff',
-  router: '#13c2c2',
-  ac: '#eb2f96',
-  unknown: '#8c8c8c',
+const ROLE_THEME: Record<string, { border: string; bg: string; badge: string }> = {
+  firewall: { border: '#fa541c', bg: '#fff2e8', badge: '防火墙' },
+  core: { border: '#722ed1', bg: '#f9f0ff', badge: '核心' },
+  aggregation: { border: '#2f54eb', bg: '#f0f5ff', badge: '汇聚' },
+  access: { border: '#1677ff', bg: '#e6f4ff', badge: '接入' },
+  router: { border: '#13c2c2', bg: '#e6fffb', badge: '路由' },
+  ac: { border: '#eb2f96', bg: '#fff0f6', badge: 'AC' },
+  unknown: { border: '#8c8c8c', bg: '#fafafa', badge: '未知' },
 };
+
+function shortPort(p?: string): string {
+  if (!p) return '-';
+  return p
+    .replace(/^XGigabitEthernet/i, 'XGE')
+    .replace(/^GigabitEthernet/i, 'GE')
+    .replace(/^FastEthernet/i, 'FE');
+}
+
+function escapeHtml(s?: string): string {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 const TopologyPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +75,9 @@ const TopologyPage: React.FC = () => {
         includeAllEndpoints,
         expandDeviceIds: includeAllEndpoints ? [] : expandedDeviceIds,
       });
-      setTopo({ nodes: res.nodes || [], links: res.links || [] });
+      // 默认隐藏已失效的 stale 链路，避免与活跃链路重叠造成视觉杂乱
+      const activeLinks = (res.links || []).filter((l) => l.status !== 'stale');
+      setTopo({ nodes: res.nodes || [], links: activeLinks });
     } finally {
       setLoading(false);
     }
@@ -86,34 +103,72 @@ const TopologyPage: React.FC = () => {
 
     const g6Nodes = topo.nodes.map((n) => {
       const isEp = n.kind === 'endpoint';
-      const fill = isEp
-        ? n.status === 'online'
-          ? '#52c41a'
-          : '#bfbfbf'
-        : n.managed
-          ? ROLE_COLOR[n.role] || '#1677ff'
-          : '#bfbfbf';
-      const subtitle = isEp
-        ? n.ip || ''
-        : n.endpointCount > 0
-          ? `${n.ip || ''} · ${n.endpointCount}终端`
-          : n.ip || '';
+      if (isEp) {
+        const online = n.status === 'online';
+        return {
+          id: n.id,
+          type: 'rect',
+          data: { ...n },
+          style: {
+            size: [132, 40],
+            radius: 20,
+            fill: online ? '#f6ffed' : '#f5f5f5',
+            stroke: online ? '#52c41a' : '#d9d9d9',
+            lineWidth: 1.5,
+            shadowColor: 'rgba(0,0,0,0.06)',
+            shadowBlur: 6,
+            shadowOffsetY: 2,
+            labelText: n.ip ? `${n.name}\n${n.ip}` : n.name,
+            labelPlacement: 'center' as const,
+            labelFontSize: 11,
+            labelLineHeight: 15,
+            labelFill: '#262626',
+            labelMaxWidth: 118,
+            labelWordWrap: false,
+            cursor: 'pointer',
+          },
+        };
+      }
+
+      const theme = ROLE_THEME[n.role] || ROLE_THEME.unknown;
+      const offline = n.status === 'offline';
+      const label = n.ip ? `${n.name}\n${n.ip}` : n.name;
       return {
         id: n.id,
+        type: 'rect',
         data: { ...n },
         style: {
-          size: isEp ? 28 : 44,
-          fill,
-          stroke: n.status === 'offline' ? '#ff4d4f' : '#ffffff',
-          lineWidth: n.status === 'offline' ? 3 : 2,
-          lineDash: !isEp && !n.managed ? [4, 3] : undefined,
-          labelText: subtitle ? `${n.name}\n${subtitle}` : n.name,
-          labelPlacement: 'bottom' as const,
-          labelFontSize: isEp ? 11 : 12,
-          labelFill: '#262626',
-          labelBackground: true,
-          labelBackgroundFill: 'rgba(255,255,255,0.85)',
-          labelBackgroundRadius: 3,
+          size: [152, 54],
+          radius: 10,
+          fill: n.managed ? '#ffffff' : '#fafafa',
+          stroke: offline ? '#ff4d4f' : n.managed ? theme.border : '#bfbfbf',
+          lineWidth: n.role === 'core' || n.role === 'firewall' ? 2.5 : 1.8,
+          lineDash: n.managed ? undefined : [5, 3],
+          shadowColor: 'rgba(15, 23, 42, 0.08)',
+          shadowBlur: 10,
+          shadowOffsetY: 3,
+          // 节点仅显示名称和管理 IP，保持画布整洁
+          labelText: label,
+          labelPlacement: 'center' as const,
+          labelFontSize: 12,
+          labelFontWeight: 500,
+          labelLineHeight: 18,
+          labelFill: '#1f2937',
+          labelMaxWidth: 138,
+          // 左上角角色小徽章，视觉区分设备角色
+          badges: [
+            {
+              text: theme.badge,
+              placement: 'top-right' as const,
+              fill: theme.border,
+              backgroundFill: theme.bg,
+              backgroundStroke: theme.border,
+              backgroundLineWidth: 1,
+              fontSize: 10,
+              padding: [1, 5],
+            },
+          ],
+          cursor: 'pointer',
         },
       };
     });
@@ -121,56 +176,132 @@ const TopologyPage: React.FC = () => {
     const g6Edges = topo.links.map((l) => {
       const isLag = (l.members || []).length > 1;
       const isAccess = l.kind === 'access';
-      const stroke =
-        l.status === 'down'
-          ? '#ff4d4f'
-          : l.status === 'stale'
-            ? '#bfbfbf'
-            : isAccess
-              ? '#95de64'
-              : isLag
-                ? '#722ed1'
-                : '#69b1ff';
-      const label = isAccess
-        ? l.sourcePort
-        : isLag
-          ? `${l.sourcePort} (×${l.members.length})`
-          : `${l.sourcePort} ↔ ${l.targetPort}`;
+      const isDown = l.status === 'down';
+      const stroke = isDown
+        ? '#ff4d4f'
+        : isAccess
+          ? '#95de64'
+          : isLag
+            ? '#722ed1'
+            : '#91caff';
       return {
         id: l.id,
         source: l.source,
         target: l.target,
+        type: layoutType === 'dagre' ? 'cubic-vertical' : 'line',
         data: { ...l },
         style: {
           stroke,
-          lineWidth: isLag ? 3.5 : isAccess ? 1.5 : 2,
-          lineDash: l.status === 'stale' || isAccess ? [5, 4] : undefined,
-          labelText: label,
-          labelFontSize: 10,
-          labelFill: '#595959',
-          labelBackground: true,
-          labelBackgroundFill: 'rgba(255,255,255,0.85)',
-          labelAutoRotate: true,
+          lineWidth: isLag ? 3 : isAccess ? 1.5 : 2,
+          lineDash: isAccess ? [4, 4] : undefined,
+          // 连线默认不显示文字，悬停时通过 tooltip 展示连接详情
+          labelText: '',
+          cursor: 'pointer',
         },
       };
     });
 
     const layoutCfg =
       layoutType === 'dagre'
-        ? { type: 'dagre', rankdir: 'TB', nodesep: 65, ranksep: 90 }
+        ? { type: 'dagre', rankdir: 'TB', nodesep: 48, ranksep: 115, nodeSize: [160, 60] }
         : layoutType === 'concentric'
-          ? { type: 'concentric', nodeSize: 70, preventOverlap: true }
-          : { type: 'force', linkDistance: 150, preventOverlap: true };
+          ? { type: 'concentric', nodeSize: 170, preventOverlap: true, equidistant: true }
+          : { type: 'force', linkDistance: 210, preventOverlap: true, nodeSize: 165 };
 
     const graph = new Graph({
       container: el,
-      width: el.clientWidth || 960,
-      height: 620,
+      width: el.clientWidth || 1000,
+      height: 640,
       autoFit: 'view',
-      padding: 40,
-      data: { nodes: g6Nodes, edges: g6Edges },
+      padding: [48, 48, 48, 48],
+      data: { nodes: g6Nodes as any, edges: g6Edges as any },
       layout: layoutCfg,
-      behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'],
+      edge: {
+        state: {
+          active: {
+            stroke: '#1677ff',
+            lineWidth: 3.5,
+          },
+          inactive: {
+            strokeOpacity: 0.25,
+          },
+        },
+      },
+      node: {
+        state: {
+          active: {
+            shadowColor: 'rgba(22, 119, 255, 0.35)',
+            shadowBlur: 14,
+          },
+          inactive: {
+            opacity: 0.35,
+          },
+        },
+      },
+      behaviors: [
+        'drag-canvas',
+        'zoom-canvas',
+        'drag-element',
+        {
+          type: 'hover-activate',
+          degree: 1,
+          state: 'active',
+          inactiveState: 'inactive',
+        },
+      ],
+      plugins: [
+        {
+          type: 'tooltip',
+          trigger: 'hover',
+          enable: true,
+          enterable: false,
+          getContent: (_evt: any, items: any[]) => {
+            const item = items?.[0];
+            if (!item) return '';
+            const edge = linkMap.get(item.id);
+            if (edge) {
+              const src = nodeMap.get(edge.source);
+              const dst = nodeMap.get(edge.target);
+              const isLag = (edge.members || []).length > 1;
+              const membersHtml = isLag
+                ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;font-size:11px;color:#595959;">
+                     <div style="margin-bottom:2px;font-weight:500;">聚合链路成员 (${edge.members.length}):</div>
+                     ${edge.members.map((m) => `<div>• ${escapeHtml(m)}</div>`).join('')}
+                   </div>`
+                : '';
+              return `
+                <div style="padding:4px 6px;min-width:220px;font-size:12px;line-height:1.6;color:#262626;">
+                  <div style="font-weight:600;margin-bottom:4px;color:#1677ff;">
+                    ${escapeHtml(src?.name || edge.source)} ↔ ${escapeHtml(dst?.name || edge.target)}
+                  </div>
+                  <div><strong>本端端口：</strong>${escapeHtml(shortPort(edge.sourcePort))}</div>
+                  ${edge.targetPort ? `<div><strong>对端端口：</strong>${escapeHtml(shortPort(edge.targetPort))}</div>` : ''}
+                  <div><strong>链路类型：</strong>${escapeHtml(edge.kind.toUpperCase())}${isLag ? ' (Eth-Trunk)' : ''} · 置信度 ${Math.round((edge.confidence || 0) * 100)}%</div>
+                  ${membersHtml}
+                </div>`;
+            }
+            const node = nodeMap.get(item.id);
+            if (node) {
+              if (node.kind === 'endpoint') {
+                return `
+                  <div style="padding:4px 6px;font-size:12px;line-height:1.6;color:#262626;">
+                    <div style="font-weight:600;">${escapeHtml(node.name)}</div>
+                    <div>IP：${escapeHtml(node.ip || '-')}</div>
+                    <div>厂商：${escapeHtml(node.vendor || '-')}</div>
+                  </div>`;
+              }
+              return `
+                <div style="padding:4px 6px;font-size:12px;line-height:1.6;color:#262626;">
+                  <div style="font-weight:600;">${escapeHtml(node.name)}</div>
+                  <div>管理 IP：${escapeHtml(node.ip || '-')}</div>
+                  <div>型号：${escapeHtml([node.vendor, node.model].filter(Boolean).join(' ') || '-')}</div>
+                  <div>下挂终端：${node.endpointCount || 0} 个（点击展开/查看详情）</div>
+                </div>`;
+            }
+            return '';
+          },
+        },
+      ],
     });
 
     graph.on('node:click', (evt: any) => {
@@ -196,7 +327,7 @@ const TopologyPage: React.FC = () => {
 
     const onResize = () => {
       if (graphRef.current && containerRef.current) {
-        graphRef.current.resize(containerRef.current.clientWidth || 960, 620);
+        graphRef.current.resize(containerRef.current.clientWidth || 1000, 640);
       }
     };
     window.addEventListener('resize', onResize);
@@ -282,32 +413,43 @@ const TopologyPage: React.FC = () => {
       ]}
     >
       <ProCard
-        styles={{ body: { padding: 0, position: 'relative', minHeight: 620 } }}
+        styles={{
+          body: {
+            padding: 0,
+            position: 'relative',
+            minHeight: 640,
+            backgroundColor: '#fafbfd',
+            backgroundImage: 'radial-gradient(#d9e1ec 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+          },
+        }}
         extra={
-          <Space size={8} wrap>
+          <Space size={6} wrap>
             <Tag color="volcano">防火墙</Tag>
             <Tag color="purple">核心</Tag>
             <Tag color="geekblue">汇聚</Tag>
             <Tag color="blue">接入</Tag>
             <Tag color="green">在线终端</Tag>
-            <Tag>虚线:未纳管/接入</Tag>
+            <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 4 }}>
+              悬停连线查看端口 · 点击节点展开终端
+            </span>
           </Space>
         }
         title={
           <Space>
             <ApartmentOutlined />
             <span>
-              节点 {topo.nodes.length} · 链路 {topo.links.length}
+              节点 {topo.nodes.length} · 活跃链路 {topo.links.length}
             </span>
           </Space>
         }
       >
         {topo.nodes.length === 0 ? (
-          <div style={{ padding: '140px 0' }}>
+          <div style={{ padding: '160px 0' }}>
             <Empty description="暂无拓扑数据，请先在「发现与凭据」中扫描网络" />
           </div>
         ) : (
-          <div ref={containerRef} style={{ width: '100%', height: 620 }} />
+          <div ref={containerRef} style={{ width: '100%', height: 640 }} />
         )}
       </ProCard>
 
