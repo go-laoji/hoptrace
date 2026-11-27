@@ -169,8 +169,12 @@ func parsePrivProto(s string) gosnmp.SnmpV3PrivProtocol {
 		return gosnmp.AES
 	case "AES192":
 		return gosnmp.AES192
+	case "AES192C", "AES-192-C":
+		return gosnmp.AES192C
 	case "AES256":
 		return gosnmp.AES256
+	case "AES256C", "AES-256-C":
+		return gosnmp.AES256C
 	default:
 		return gosnmp.NoPriv
 	}
