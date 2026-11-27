@@ -36,6 +36,11 @@ const (
 	ErrorReason_DISCOVERY_NOT_FOUND         ErrorReason = 9
 	ErrorReason_DISCOVERY_INVALID_ARGUMENT  ErrorReason = 10
 	ErrorReason_COLLECT_FAILED              ErrorReason = 11
+	ErrorReason_UNAUTHORIZED                ErrorReason = 12
+	ErrorReason_FORBIDDEN                   ErrorReason = 13
+	ErrorReason_INVALID_CREDENTIALS         ErrorReason = 14
+	ErrorReason_USER_NOT_FOUND              ErrorReason = 15
+	ErrorReason_USER_ALREADY_EXISTS         ErrorReason = 16
 )
 
 // Enum value maps for ErrorReason.
@@ -53,6 +58,11 @@ var (
 		9:  "DISCOVERY_NOT_FOUND",
 		10: "DISCOVERY_INVALID_ARGUMENT",
 		11: "COLLECT_FAILED",
+		12: "UNAUTHORIZED",
+		13: "FORBIDDEN",
+		14: "INVALID_CREDENTIALS",
+		15: "USER_NOT_FOUND",
+		16: "USER_ALREADY_EXISTS",
 	}
 	ErrorReason_value = map[string]int32{
 		"ERROR_REASON_UNSPECIFIED":    0,
@@ -67,6 +77,11 @@ var (
 		"DISCOVERY_NOT_FOUND":         9,
 		"DISCOVERY_INVALID_ARGUMENT":  10,
 		"COLLECT_FAILED":              11,
+		"UNAUTHORIZED":                12,
+		"FORBIDDEN":                   13,
+		"INVALID_CREDENTIALS":         14,
+		"USER_NOT_FOUND":              15,
+		"USER_ALREADY_EXISTS":         16,
 	}
 )
 
@@ -101,7 +116,7 @@ var File_hoptrace_v1_error_reason_proto protoreflect.FileDescriptor
 
 const file_hoptrace_v1_error_reason_proto_rawDesc = "" +
 	"\n" +
-	"\x1ehoptrace/v1/error_reason.proto\x12\vhoptrace.v1*\xcf\x02\n" +
+	"\x1ehoptrace/v1/error_reason.proto\x12\vhoptrace.v1*\xb6\x03\n" +
 	"\vErrorReason\x12\x1c\n" +
 	"\x18ERROR_REASON_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10DEVICE_NOT_FOUND\x10\x01\x12\x1b\n" +
@@ -115,7 +130,12 @@ const file_hoptrace_v1_error_reason_proto_rawDesc = "" +
 	"\x13DISCOVERY_NOT_FOUND\x10\t\x12\x1e\n" +
 	"\x1aDISCOVERY_INVALID_ARGUMENT\x10\n" +
 	"\x12\x12\n" +
-	"\x0eCOLLECT_FAILED\x10\vB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
+	"\x0eCOLLECT_FAILED\x10\v\x12\x10\n" +
+	"\fUNAUTHORIZED\x10\f\x12\r\n" +
+	"\tFORBIDDEN\x10\r\x12\x17\n" +
+	"\x13INVALID_CREDENTIALS\x10\x0e\x12\x12\n" +
+	"\x0eUSER_NOT_FOUND\x10\x0f\x12\x17\n" +
+	"\x13USER_ALREADY_EXISTS\x10\x10B\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
 
 var (
 	file_hoptrace_v1_error_reason_proto_rawDescOnce sync.Once

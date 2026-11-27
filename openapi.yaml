@@ -6,6 +6,51 @@ info:
     title: ""
     version: 0.0.1
 paths:
+    /api/v1/auth/login:
+        post:
+            tags:
+                - AuthService
+            operationId: AuthService_Login
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.LoginRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.LoginReply'
+    /api/v1/auth/me:
+        get:
+            tags:
+                - AuthService
+            operationId: AuthService_CurrentUser
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.CurrentUserReply'
+    /api/v1/auth/password:
+        post:
+            tags:
+                - AuthService
+            operationId: AuthService_ChangePassword
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.ChangePasswordRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
     /api/v1/credentials:
         get:
             tags:
@@ -463,8 +508,59 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/users:
+        get:
+            tags:
+                - AuthService
+            operationId: AuthService_ListUsers
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListUsersReply'
+        post:
+            tags:
+                - AuthService
+            operationId: AuthService_CreateUser
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.CreateUserRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.User'
+    /api/v1/users/{id}:
+        delete:
+            tags:
+                - AuthService
+            operationId: AuthService_DeleteUser
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
 components:
     schemas:
+        hoptrace.v1.ChangePasswordRequest:
+            type: object
+            properties:
+                oldPassword:
+                    type: string
+                newPassword:
+                    type: string
         hoptrace.v1.CreateDeviceRequest:
             type: object
             properties:
@@ -480,6 +576,17 @@ components:
                 site:
                     type: string
                 location:
+                    type: string
+        hoptrace.v1.CreateUserRequest:
+            type: object
+            properties:
+                username:
+                    type: string
+                password:
+                    type: string
+                displayName:
+                    type: string
+                role:
                     type: string
         hoptrace.v1.Credential:
             type: object
@@ -507,6 +614,13 @@ components:
                     type: boolean
                 createdAt:
                     type: string
+        hoptrace.v1.CurrentUserReply:
+            type: object
+            properties:
+                authEnabled:
+                    type: boolean
+                user:
+                    $ref: '#/components/schemas/hoptrace.v1.User'
         hoptrace.v1.Dashboard:
             type: object
             properties:
@@ -839,6 +953,29 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/hoptrace.v1.DiscoveryJob'
+        hoptrace.v1.ListUsersReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.User'
+        hoptrace.v1.LoginReply:
+            type: object
+            properties:
+                token:
+                    type: string
+                expiresAt:
+                    type: string
+                user:
+                    $ref: '#/components/schemas/hoptrace.v1.User'
+        hoptrace.v1.LoginRequest:
+            type: object
+            properties:
+                username:
+                    type: string
+                password:
+                    type: string
         hoptrace.v1.PollDeviceRequest:
             type: object
             properties:
@@ -989,7 +1126,22 @@ components:
                     type: string
                 remark:
                     type: string
+        hoptrace.v1.User:
+            type: object
+            properties:
+                id:
+                    type: string
+                username:
+                    type: string
+                displayName:
+                    type: string
+                role:
+                    type: string
+                createdAt:
+                    type: string
 tags:
+    - name: AuthService
+      description: AuthService 登录鉴权与用户管理(RBAC)
     - name: CredentialService
       description: CredentialService SNMP 凭据管理(密文字段不会回显)
     - name: DashboardService

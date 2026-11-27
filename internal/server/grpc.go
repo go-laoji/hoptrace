@@ -2,6 +2,7 @@ package server
 
 import (
 	v1 "hoptrace/api/hoptrace/v1"
+	"hoptrace/internal/biz"
 	"hoptrace/internal/conf"
 	"hoptrace/internal/service"
 
@@ -12,16 +13,19 @@ import (
 // NewGRPCServer new a gRPC server.
 func NewGRPCServer(
 	c *conf.Server,
+	authUC *biz.AuthUsecase,
 	dev *service.DeviceService,
 	cred *service.CredentialService,
 	disc *service.DiscoveryService,
 	topo *service.TopologyService,
 	ep *service.EndpointService,
 	dash *service.DashboardService,
+	auth *service.AuthService,
 ) *grpc.Server {
 	opts := []grpc.ServerOption{
 		grpc.Middleware(
 			recovery.Recovery(),
+			AuthMiddleware(authUC),
 		),
 	}
 	if c.GetGrpc().GetNetwork() != "" {
@@ -40,5 +44,6 @@ func NewGRPCServer(
 	v1.RegisterTopologyServiceServer(srv, topo)
 	v1.RegisterEndpointServiceServer(srv, ep)
 	v1.RegisterDashboardServiceServer(srv, dash)
+	v1.RegisterAuthServiceServer(srv, auth)
 	return srv
 }

@@ -28,6 +28,12 @@ func wireApp(confServer *conf.Server, confData *conf.Data, collector *conf.Colle
 	if err != nil {
 		return nil, nil, err
 	}
+	userRepo := data.NewUserRepo(dataData)
+	authUsecase, err := biz.NewAuthUsecase(userRepo, security)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
 	deviceRepo := data.NewDeviceRepo(dataData)
 	credentialRepo := data.NewCredentialRepo(dataData)
 	bizCollector := data.NewCollector(collector)
@@ -49,8 +55,9 @@ func wireApp(confServer *conf.Server, confData *conf.Data, collector *conf.Colle
 	statsRepo := data.NewStatsRepo(dataData)
 	dashboardUsecase := biz.NewDashboardUsecase(statsRepo)
 	dashboardService := service.NewDashboardService(dashboardUsecase)
-	grpcServer := server.NewGRPCServer(confServer, deviceService, credentialService, discoveryService, topologyService, endpointService, dashboardService)
-	httpServer := server.NewHTTPServer(confServer, deviceService, credentialService, discoveryService, topologyService, endpointService, dashboardService)
+	authService := service.NewAuthService(authUsecase)
+	grpcServer := server.NewGRPCServer(confServer, authUsecase, deviceService, credentialService, discoveryService, topologyService, endpointService, dashboardService, authService)
+	httpServer := server.NewHTTPServer(confServer, authUsecase, deviceService, credentialService, discoveryService, topologyService, endpointService, dashboardService, authService)
 	poller := server.NewPoller(pollUsecase, jobRepo)
 	trapServer := server.NewTrapServer(collector, deviceRepo, pollUsecase)
 	app := newApp(logger, grpcServer, httpServer, poller, trapServer)

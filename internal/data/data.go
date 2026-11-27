@@ -24,6 +24,7 @@ var ProviderSet = wire.NewSet(
 	NewEndpointRepo,
 	NewJobRepo,
 	NewStatsRepo,
+	NewUserRepo,
 	NewCollector,
 )
 
@@ -89,6 +90,7 @@ func NewData(c *conf.Data, sec *conf.Security) (*Data, func(), error) {
 			&EndpointLocationPO{},
 			&EndpointEventPO{},
 			&DiscoveryJobPO{},
+			&UserPO{},
 		); err != nil {
 			return nil, nil, err
 		}

@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// AuthService 登录鉴权与用户管理(RBAC)
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginReply) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/login"
+      body: "*"
+    };
+  }
+  rpc CurrentUser(google.protobuf.Empty) returns (CurrentUserReply) {
+    option (google.api.http) = {get: "/api/v1/auth/me"};
+  }
+  rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/password"
+      body: "*"
+    };
+  }
+  rpc ListUsers(google.protobuf.Empty) returns (ListUsersReply) {
+    option (google.api.http) = {get: "/api/v1/users"};
+  }
+  rpc CreateUser(CreateUserRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/api/v1/users"
+      body: "*"
+    };
+  }
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/users/{id}"};
+  }
+}
+
+message User {
+  int64 id = 1;
+  string username = 2;
+  string display_name = 3;
+  string role = 4; // admin / operator / viewer
+  int64 created_at = 5;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginReply {
+  string token = 1;
+  int64 expires_at = 2;
+  User user = 3;
+}
+
+message CurrentUserReply {
+  bool auth_enabled = 1;
+  User user = 2;
+}
+
+message ChangePasswordRequest {
+  string old_password = 1;
+  string new_password = 2;
+}
+
+message ListUsersReply {
+  repeated User items = 1;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string password = 2;
+  string display_name = 3;
+  string role = 4;
+}
+
+message DeleteUserRequest {
+  int64 id = 1;
+}

@@ -16,6 +16,7 @@ var ProviderSet = wire.NewSet(
 	NewPollUsecase,
 	NewDiscoveryUsecase,
 	NewDashboardUsecase,
+	NewAuthUsecase,
 )
 
 // NewOptions 从配置构建 biz 运行参数。

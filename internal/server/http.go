@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	v1 "hoptrace/api/hoptrace/v1"
+	"hoptrace/internal/biz"
 	"hoptrace/internal/conf"
 	"hoptrace/internal/service"
 
@@ -18,16 +19,19 @@ import (
 // NewHTTPServer new an HTTP server.
 func NewHTTPServer(
 	c *conf.Server,
+	authUC *biz.AuthUsecase,
 	dev *service.DeviceService,
 	cred *service.CredentialService,
 	disc *service.DiscoveryService,
 	topo *service.TopologyService,
 	ep *service.EndpointService,
 	dash *service.DashboardService,
+	auth *service.AuthService,
 ) *http.Server {
 	opts := []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
+			AuthMiddleware(authUC),
 		),
 		http.Filter(handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),
@@ -51,6 +55,7 @@ func NewHTTPServer(
 	v1.RegisterTopologyServiceHTTPServer(srv, topo)
 	v1.RegisterEndpointServiceHTTPServer(srv, ep)
 	v1.RegisterDashboardServiceHTTPServer(srv, dash)
+	v1.RegisterAuthServiceHTTPServer(srv, auth)
 
 	// 若配置了前端构建目录(如 web/dist),由后端直接托管 SPA
 	if dir := strings.TrimSpace(c.GetStaticDir()); dir != "" {
