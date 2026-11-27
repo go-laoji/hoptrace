@@ -29,6 +29,7 @@ type TrapServer struct {
 	addr     string
 	debounce time.Duration
 	devices  biz.DeviceRepo
+	creds    biz.CredentialRepo
 	poll     *biz.PollUsecase
 
 	listener *gosnmp.TrapListener
@@ -39,7 +40,7 @@ type TrapServer struct {
 	onNotify func(ip, trapOID string) // 仅用于测试观察
 }
 
-func NewTrapServer(c *conf.Collector, devices biz.DeviceRepo, poll *biz.PollUsecase) *TrapServer {
+func NewTrapServer(c *conf.Collector, devices biz.DeviceRepo, creds biz.CredentialRepo, poll *biz.PollUsecase) *TrapServer {
 	deb := c.GetTrapDebounce().AsDuration()
 	if deb <= 0 {
 		deb = 15 * time.Second
@@ -48,19 +49,50 @@ func NewTrapServer(c *conf.Collector, devices biz.DeviceRepo, poll *biz.PollUsec
 		addr:     strings.TrimSpace(c.GetTrapAddr()),
 		debounce: deb,
 		devices:  devices,
+		creds:    creds,
 		poll:     poll,
 		timers:   map[string]*time.Timer{},
 	}
 }
 
-func (s *TrapServer) Start(_ context.Context) error {
+func (s *TrapServer) Start(ctx context.Context) error {
 	if s.addr == "" {
 		log.Info("SNMP trap listener disabled (collector.trap_addr is empty)")
 		return nil
 	}
 	tl := gosnmp.NewTrapListener()
 	tl.OnNewTrap = s.handleTrap
-	tl.Params = gosnmp.Default
+	params := *gosnmp.Default
+	// 若凭据库存在 SNMPv3 凭据, 自动装配 USM 参数以支持 SNMPv3 加密 Trap (同时仍兼容 v1/v2c)
+	if s.creds != nil {
+		if list, err := s.creds.List(ctx); err == nil {
+			for _, c := range list {
+				if strings.EqualFold(c.Version, "v3") && c.Username != "" {
+					params.Version = gosnmp.Version3
+					params.SecurityModel = gosnmp.UserSecurityModel
+					usp := &gosnmp.UsmSecurityParameters{
+						UserName:                 c.Username,
+						AuthenticationProtocol:   trapAuthProto(c.AuthProtocol),
+						AuthenticationPassphrase: c.AuthPassword,
+						PrivacyProtocol:          trapPrivProto(c.PrivProtocol),
+						PrivacyPassphrase:        c.PrivPassword,
+					}
+					switch {
+					case usp.AuthenticationProtocol != gosnmp.NoAuth && usp.PrivacyProtocol != gosnmp.NoPriv:
+						params.MsgFlags = gosnmp.AuthPriv
+					case usp.AuthenticationProtocol != gosnmp.NoAuth:
+						params.MsgFlags = gosnmp.AuthNoPriv
+					default:
+						params.MsgFlags = gosnmp.NoAuthNoPriv
+					}
+					params.SecurityParameters = usp
+					log.Info("SNMP trap listener loaded v3 USM credential", "credential", c.Name, "user", c.Username)
+					break
+				}
+			}
+		}
+	}
+	tl.Params = &params
 	s.listener = tl
 	log.Info("SNMP trap listener starting", "addr", s.addr, "debounce", s.debounce)
 	err := tl.Listen(s.addr)
@@ -168,5 +200,43 @@ func shouldTriggerPoll(trapOID string) bool {
 		return true
 	default:
 		return strings.HasPrefix(trapOID, oidLinkDown) || strings.HasPrefix(trapOID, oidLinkUp)
+	}
+}
+
+func trapAuthProto(s string) gosnmp.SnmpV3AuthProtocol {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "MD5":
+		return gosnmp.MD5
+	case "SHA", "SHA1":
+		return gosnmp.SHA
+	case "SHA224":
+		return gosnmp.SHA224
+	case "SHA256":
+		return gosnmp.SHA256
+	case "SHA384":
+		return gosnmp.SHA384
+	case "SHA512":
+		return gosnmp.SHA512
+	default:
+		return gosnmp.NoAuth
+	}
+}
+
+func trapPrivProto(s string) gosnmp.SnmpV3PrivProtocol {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "DES":
+		return gosnmp.DES
+	case "AES", "AES128":
+		return gosnmp.AES
+	case "AES192":
+		return gosnmp.AES192
+	case "AES192C", "AES-192-C":
+		return gosnmp.AES192C
+	case "AES256":
+		return gosnmp.AES256
+	case "AES256C", "AES-256-C":
+		return gosnmp.AES256C
+	default:
+		return gosnmp.NoPriv
 	}
 }

@@ -227,6 +227,13 @@ func (uc *DeviceUsecase) Interfaces(ctx context.Context, id uint) ([]*Interface,
 	return uc.repo.ListInterfaces(ctx, id)
 }
 
+func (uc *DeviceUsecase) InterfaceMetrics(ctx context.Context, deviceID uint, ifIndex, limit int) ([]InterfaceMetricPoint, error) {
+	if limit <= 0 {
+		limit = 30
+	}
+	return uc.repo.ListInterfaceMetrics(ctx, deviceID, ifIndex, limit)
+}
+
 // ---------- 采集编排 ----------
 
 // PollUsecase 设备采集编排:单设备采集、到期轮询、拓扑与终端刷新。
@@ -236,6 +243,7 @@ type PollUsecase struct {
 	collector Collector
 	topo      *TopologyUsecase
 	endpoints *EndpointUsecase
+	alerts    *AlertUsecase
 	bus       *EventBus
 	opts      Options
 
@@ -244,9 +252,9 @@ type PollUsecase struct {
 	refresh  sync.Mutex
 }
 
-func NewPollUsecase(devices DeviceRepo, creds CredentialRepo, c Collector, topo *TopologyUsecase, eps *EndpointUsecase, bus *EventBus, opts Options) *PollUsecase {
+func NewPollUsecase(devices DeviceRepo, creds CredentialRepo, c Collector, topo *TopologyUsecase, eps *EndpointUsecase, alerts *AlertUsecase, bus *EventBus, opts Options) *PollUsecase {
 	return &PollUsecase{
-		devices: devices, creds: creds, collector: c, topo: topo, endpoints: eps, bus: bus,
+		devices: devices, creds: creds, collector: c, topo: topo, endpoints: eps, alerts: alerts, bus: bus,
 		opts: opts.withDefaults(), inflight: map[uint]struct{}{},
 	}
 }
@@ -295,6 +303,13 @@ func (uc *PollUsecase) PollDevice(ctx context.Context, id uint) error {
 	snap, err := uc.collector.Collect(ctx, Target{IP: d.MgmtIP, Port: port, Credential: cred})
 	if err != nil {
 		_ = uc.devices.RecordFailure(ctx, id, err.Error(), 2)
+		if d.FailCount+1 >= 2 && uc.alerts != nil {
+			uc.alerts.Raise(ctx, &Alert{
+				Kind: AlertDeviceOffline, Severity: SeverityCritical,
+				Title:   fmt.Sprintf("网络设备离线: %s (%s)", d.Name, d.MgmtIP),
+				Message: "SNMP 连续采集失败: " + err.Error(), TargetKey: d.MgmtIP, DeviceID: d.ID,
+			})
+		}
 		return ErrCollectFailed(err.Error())
 	}
 	applySnapshot(d, snap)

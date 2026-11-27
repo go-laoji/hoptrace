@@ -95,6 +95,9 @@ type DevicePO struct {
 	LastError    string `gorm:"size:500"`
 	FailCount    int
 	ArpCount     int
+	PosX         float64
+	PosY         float64
+	HasPos       bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -102,24 +105,59 @@ type DevicePO struct {
 func (DevicePO) TableName() string { return "devices" }
 
 type InterfacePO struct {
-	ID          uint   `gorm:"primaryKey"`
-	DeviceID    uint   `gorm:"uniqueIndex:idx_if_dev_idx"`
-	IfIndex     int    `gorm:"uniqueIndex:idx_if_dev_idx"`
-	Name        string `gorm:"size:100"`
-	Descr       string `gorm:"size:200"`
-	Alias       string `gorm:"size:200"`
-	IfType      int
-	SpeedMbps   int64
-	AdminStatus string `gorm:"size:10"`
-	OperStatus  string `gorm:"size:10"`
-	MAC         string `gorm:"size:20;index"`
-	Kind        string `gorm:"size:20"`
-	AggIfIndex  int
-	MACCount    int
-	Neighbor    string `gorm:"size:300"`
+	ID             uint   `gorm:"primaryKey"`
+	DeviceID       uint   `gorm:"uniqueIndex:idx_if_dev_idx"`
+	IfIndex        int    `gorm:"uniqueIndex:idx_if_dev_idx"`
+	Name           string `gorm:"size:100"`
+	Descr          string `gorm:"size:200"`
+	Alias          string `gorm:"size:200"`
+	IfType         int
+	SpeedMbps      int64
+	AdminStatus    string `gorm:"size:10"`
+	OperStatus     string `gorm:"size:10"`
+	MAC            string `gorm:"size:20;index"`
+	Kind           string `gorm:"size:20"`
+	AggIfIndex     int
+	MACCount       int
+	Neighbor       string `gorm:"size:300"`
+	InOctets       uint64
+	OutOctets      uint64
+	InBps          int64
+	OutBps         int64
+	UtilizationPct float64
+	InErrors       int64
+	OutErrors      int64
+	SampledAt      *time.Time
 }
 
 func (InterfacePO) TableName() string { return "interfaces" }
+
+type InterfaceMetricPO struct {
+	ID             uint      `gorm:"primaryKey"`
+	DeviceID       uint      `gorm:"index:idx_ifm_dev_idx"`
+	IfIndex        int       `gorm:"index:idx_ifm_dev_idx"`
+	At             time.Time `gorm:"index"`
+	InBps          int64
+	OutBps         int64
+	UtilizationPct float64
+	InErrors       int64
+	OutErrors      int64
+}
+
+func (InterfaceMetricPO) TableName() string { return "interface_metrics" }
+
+type WirelessSTAPO struct {
+	ID       uint   `gorm:"primaryKey"`
+	DeviceID uint   `gorm:"index"`
+	MAC      string `gorm:"size:20;index"`
+	IP       string `gorm:"size:64"`
+	SSID     string `gorm:"size:100"`
+	APName   string `gorm:"size:120"`
+	RSSI     int
+	VLAN     int
+}
+
+func (WirelessSTAPO) TableName() string { return "wireless_stas" }
 
 type NeighborPO struct {
 	ID            uint   `gorm:"primaryKey"`
@@ -195,6 +233,10 @@ type EndpointPO struct {
 	IfIndex         int
 	IfName          string     `gorm:"size:100"`
 	VLAN            int
+	AccessType      string     `gorm:"size:20;index"`
+	SSID            string     `gorm:"size:100"`
+	APName          string     `gorm:"size:120"`
+	RSSI            int
 	FirstSeen       time.Time
 	LastSeen        time.Time
 	MissCount       int
@@ -257,7 +299,7 @@ func deviceToPO(d *biz.Device) *DevicePO {
 		IPs: StringList(d.IPs), ChassisMAC: d.ChassisMAC, CPUUsage: d.CPUUsage, MemUsage: d.MemUsage,
 		Temperature: d.Temperature, StackMembers: d.StackMembers, UptimeSecs: d.UptimeSecs,
 		LastPollAt: d.LastPollAt, LastError: d.LastError, FailCount: d.FailCount, ArpCount: d.ArpCount,
-		CreatedAt: d.CreatedAt,
+		PosX: d.PosX, PosY: d.PosY, HasPos: d.HasPos, CreatedAt: d.CreatedAt,
 	}
 }
 
@@ -270,7 +312,7 @@ func deviceToBiz(p *DevicePO) *biz.Device {
 		IPs: []string(p.IPs), ChassisMAC: p.ChassisMAC, CPUUsage: p.CPUUsage, MemUsage: p.MemUsage,
 		Temperature: p.Temperature, StackMembers: p.StackMembers, UptimeSecs: p.UptimeSecs,
 		LastPollAt: p.LastPollAt, LastError: p.LastError, FailCount: p.FailCount, ArpCount: p.ArpCount,
-		CreatedAt: p.CreatedAt,
+		PosX: p.PosX, PosY: p.PosY, HasPos: p.HasPos, CreatedAt: p.CreatedAt,
 	}
 }
 
@@ -279,6 +321,8 @@ func interfaceToPO(deviceID uint, it *biz.Interface) InterfacePO {
 		DeviceID: deviceID, IfIndex: it.IfIndex, Name: it.Name, Descr: it.Descr, Alias: it.Alias,
 		IfType: it.IfType, SpeedMbps: it.SpeedMbps, AdminStatus: it.AdminStatus, OperStatus: it.OperStatus,
 		MAC: it.MAC, Kind: it.Kind, AggIfIndex: it.AggIfIndex, MACCount: it.MACCount, Neighbor: it.Neighbor,
+		InOctets: it.InOctets, OutOctets: it.OutOctets, InBps: it.InBps, OutBps: it.OutBps,
+		UtilizationPct: it.UtilizationPct, InErrors: it.InErrors, OutErrors: it.OutErrors,
 	}
 }
 
@@ -287,6 +331,8 @@ func interfaceToBiz(p *InterfacePO) *biz.Interface {
 		ID: p.ID, DeviceID: p.DeviceID, IfIndex: p.IfIndex, Name: p.Name, Descr: p.Descr, Alias: p.Alias,
 		IfType: p.IfType, SpeedMbps: p.SpeedMbps, AdminStatus: p.AdminStatus, OperStatus: p.OperStatus,
 		MAC: p.MAC, Kind: p.Kind, AggIfIndex: p.AggIfIndex, MACCount: p.MACCount, Neighbor: p.Neighbor,
+		InOctets: p.InOctets, OutOctets: p.OutOctets, InBps: p.InBps, OutBps: p.OutBps,
+		UtilizationPct: p.UtilizationPct, InErrors: p.InErrors, OutErrors: p.OutErrors,
 	}
 }
 
@@ -323,17 +369,23 @@ func endpointToPO(e *biz.Endpoint) *EndpointPO {
 		Type: e.Type, TypeManual: e.TypeManual, Name: e.Name, Owner: e.Owner,
 		Tags: StringList(e.Tags), Remark: e.Remark, Status: e.Status, Trust: e.Trust,
 		DeviceID: e.DeviceID, IfIndex: e.IfIndex, IfName: e.IfName, VLAN: e.VLAN,
+		AccessType: e.AccessType, SSID: e.SSID, APName: e.APName, RSSI: e.RSSI,
 		FirstSeen: e.FirstSeen, LastSeen: e.LastSeen, MissCount: e.MissCount,
 		PendingDeviceID: e.PendingDeviceID, PendingIfIndex: e.PendingIfIndex, PendingRounds: e.PendingRounds,
 	}
 }
 
 func endpointToBiz(p *EndpointPO) *biz.Endpoint {
+	at := p.AccessType
+	if at == "" {
+		at = "wired"
+	}
 	return &biz.Endpoint{
 		ID: p.ID, MAC: p.MAC, IP: p.IP, IPs: []string(p.IPs), Vendor: p.Vendor,
 		Type: p.Type, TypeManual: p.TypeManual, Name: p.Name, Owner: p.Owner,
 		Tags: []string(p.Tags), Remark: p.Remark, Status: p.Status, Trust: p.Trust,
 		DeviceID: p.DeviceID, IfIndex: p.IfIndex, IfName: p.IfName, VLAN: p.VLAN,
+		AccessType: at, SSID: p.SSID, APName: p.APName, RSSI: p.RSSI,
 		FirstSeen: p.FirstSeen, LastSeen: p.LastSeen, MissCount: p.MissCount,
 		PendingDeviceID: p.PendingDeviceID, PendingIfIndex: p.PendingIfIndex, PendingRounds: p.PendingRounds,
 	}

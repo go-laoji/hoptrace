@@ -16,7 +16,7 @@ func TestTrapDebounceAndOIDMatch(t *testing.T) {
 	srv := NewTrapServer(&conf.Collector{
 		TrapAddr:     "127.0.0.1:0",
 		TrapDebounce: durationpb.New(40 * time.Millisecond),
-	}, nil, nil)
+	}, nil, nil, nil)
 
 	var calls atomic.Int32
 	srv.onNotify = func(ip, trapOID string) {
@@ -48,5 +48,12 @@ func TestTrapDebounceAndOIDMatch(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	if got := calls.Load(); got != 1 {
 		t.Fatalf("expected 1 debounced poll trigger, got %d", got)
+	}
+}
+
+func TestParseSyslogPacket(t *testing.T) {
+	sev, fac, tag, msg := ParseSyslogPacket("<188>Nov 27 18:00:00 hx-01 %%01IFNET/4/LINK_STATE(l)[12]:Interface GE0/0/1 turned DOWN.")
+	if sev != 4 || fac != "local7" || tag != "%%01IFNET/4/LINK_STATE(l)[12]" || msg == "" {
+		t.Fatalf("unexpected syslog parse: sev=%d fac=%s tag=%s msg=%s", sev, fac, tag, msg)
 	}
 }

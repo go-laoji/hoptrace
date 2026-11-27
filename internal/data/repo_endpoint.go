@@ -56,6 +56,11 @@ func (r *endpointRepo) List(ctx context.Context, f biz.EndpointFilter, page, siz
 	if f.DeviceID != 0 {
 		q = q.Where("device_id = ?", f.DeviceID)
 	}
+	if f.AccessType == "wireless" {
+		q = q.Where("access_type = ?", "wireless")
+	} else if f.AccessType == "wired" {
+		q = q.Where("access_type = ? OR access_type = ''", "wired")
+	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -126,6 +131,34 @@ func (r *endpointRepo) Get(ctx context.Context, id uint) (*biz.Endpoint, error) 
 	e := endpointToBiz(&po)
 	e.DeviceName = r.deviceNameMap(ctx)[e.DeviceID]
 	return e, nil
+}
+
+func (r *endpointRepo) FindByMAC(ctx context.Context, mac string) (*biz.Endpoint, error) {
+	var po EndpointPO
+	err := r.data.db.WithContext(ctx).Where("mac = ?", mac).First(&po).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	e := endpointToBiz(&po)
+	e.DeviceName = r.deviceNameMap(ctx)[e.DeviceID]
+	return e, nil
+}
+
+func (r *endpointRepo) ListWireless(ctx context.Context) ([]biz.WirelessSTA, error) {
+	var pos []WirelessSTAPO
+	if err := r.data.db.WithContext(ctx).Find(&pos).Error; err != nil {
+		return nil, err
+	}
+	out := make([]biz.WirelessSTA, 0, len(pos))
+	for _, p := range pos {
+		out = append(out, biz.WirelessSTA{
+			DeviceID: p.DeviceID, MAC: p.MAC, IP: p.IP, SSID: p.SSID, APName: p.APName, RSSI: p.RSSI, VLAN: p.VLAN,
+		})
+	}
+	return out, nil
 }
 
 func (r *endpointRepo) Update(ctx context.Context, e *biz.Endpoint) error {

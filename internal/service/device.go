@@ -102,8 +102,28 @@ func (s *DeviceService) ListInterfaces(ctx context.Context, req *v1.ListInterfac
 			Mac:         it.MAC,
 			Kind:        it.Kind,
 			AggIfIndex:  int32(it.AggIfIndex),
-			MacCount:    int32(it.MACCount),
-			Neighbor:    it.Neighbor,
+			MacCount:       int32(it.MACCount),
+			Neighbor:       it.Neighbor,
+			InBps:          it.InBps,
+			OutBps:         it.OutBps,
+			UtilizationPct: it.UtilizationPct,
+			InErrors:       it.InErrors,
+			OutErrors:      it.OutErrors,
+		})
+	}
+	return reply, nil
+}
+
+func (s *DeviceService) ListInterfaceMetrics(ctx context.Context, req *v1.ListInterfaceMetricsRequest) (*v1.ListInterfaceMetricsReply, error) {
+	pts, err := s.uc.InterfaceMetrics(ctx, uint(req.GetDeviceId()), int(req.GetIfIndex()), int(req.GetLimit()))
+	if err != nil {
+		return nil, err
+	}
+	reply := &v1.ListInterfaceMetricsReply{Items: make([]*v1.InterfaceMetricPoint, 0, len(pts))}
+	for _, p := range pts {
+		reply.Items = append(reply.Items, &v1.InterfaceMetricPoint{
+			At: p.At.Unix(), InBps: p.InBps, OutBps: p.OutBps, UtilizationPct: p.UtilizationPct,
+			InErrors: p.InErrors, OutErrors: p.OutErrors,
 		})
 	}
 	return reply, nil

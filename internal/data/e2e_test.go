@@ -31,9 +31,12 @@ func TestEndToEndDiscoveryWithHuaweiSim(t *testing.T) {
 	collector := snmpx.NewCollector(sim.NewDialer())
 
 	opts := biz.Options{Concurrency: 4, SuspectMACThreshold: 30, OfflineMissRounds: 2, MoveConfirmRounds: 2}
+	bus := biz.NewEventBus()
+	alertRepo := NewAlertRepo(d)
+	alertUC := biz.NewAlertUsecase(alertRepo, NewAlertNotifier(), bus)
 	topoUC := biz.NewTopologyUsecase(devRepo, topoRepo, epRepo, opts)
-	epUC := biz.NewEndpointUsecase(epRepo, devRepo, opts)
-	pollUC := biz.NewPollUsecase(devRepo, credRepo, collector, topoUC, epUC, biz.NewEventBus(), opts)
+	epUC := biz.NewEndpointUsecase(epRepo, devRepo, alertUC, opts)
+	pollUC := biz.NewPollUsecase(devRepo, credRepo, collector, topoUC, epUC, alertUC, bus, opts)
 	credUC := biz.NewCredentialUsecase(credRepo)
 	discUC := biz.NewDiscoveryUsecase(jobRepo, devRepo, credRepo, collector, pollUC)
 	dashUC := biz.NewDashboardUsecase(statsRepo)
@@ -151,5 +154,41 @@ func TestEndToEndDiscoveryWithHuaweiSim(t *testing.T) {
 	afterRB, _ := epRepo.Get(ctx, target.ID)
 	if afterRB.Trust != biz.TrustUnknown {
 		t.Fatalf("expected endpoint trust restored to unknown, got %s", afterRB.Trust)
+	}
+
+	// 7. 验证 M3: 路径追踪(终端 -> 防火墙)、坐标保存、IPAM 子网、批量导入与配置备份 Diff
+	tr, err := topoUC.TracePath(ctx, target.IP, "")
+	if err != nil || !tr.Found || len(tr.Hops) < 3 {
+		t.Fatalf("TracePath failed: err=%v tr=%+v", err, tr)
+	}
+	if err := topoUC.SaveLayout(ctx, []biz.NodePos{{DeviceID: target.DeviceID, X: 120, Y: 240}}); err != nil {
+		t.Fatalf("SaveLayout: %v", err)
+	}
+
+	ipamUC := biz.NewIpamUsecase(devRepo, epRepo)
+	subnets, err := ipamUC.ListSubnets(ctx)
+	if err != nil || len(subnets) == 0 {
+		t.Fatalf("ListSubnets: err=%v subnets=%+v", err, subnets)
+	}
+
+	impRes, err := epUC.BatchImport(ctx, []biz.EndpointImportRow{
+		{MAC: target.MAC, Owner: "张三", Trust: biz.TrustTrusted, Tags: []string{"研发部"}},
+	})
+	if err != nil || impRes.Updated != 1 {
+		t.Fatalf("BatchImport: err=%v res=%+v", err, impRes)
+	}
+
+	backupUC := biz.NewBackupUsecase(NewBackupRepo(d), devRepo, ctrlRepo, NewConfigFetcher(&conf.Collector{Simulate: true}))
+	b1, err := backupUC.Run(ctx, target.DeviceID, "manual")
+	if err != nil || b1.Status != "ok" || !b1.Changed {
+		t.Fatalf("Backup1: err=%v b=%+v", err, b1)
+	}
+	b2, err := backupUC.Run(ctx, target.DeviceID, "manual")
+	if err != nil || b2.Changed {
+		t.Fatalf("Backup2 should be unchanged: err=%v b=%+v", err, b2)
+	}
+	diff, err := backupUC.Diff(ctx, b1.ID, b2.ID)
+	if err != nil || diff.Added != 0 || diff.Removed != 0 {
+		t.Fatalf("Diff: err=%v diff=%+v", err, diff)
 	}
 }

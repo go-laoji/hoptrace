@@ -26,6 +26,10 @@ var ProviderSet = wire.NewSet(
 	NewStatsRepo,
 	NewUserRepo,
 	NewControlRepo,
+	NewAlertRepo,
+	NewAlertNotifier,
+	NewBackupRepo,
+	NewConfigFetcher,
 	NewCollector,
 	NewControlExecutor,
 )
@@ -95,6 +99,12 @@ func NewData(c *conf.Data, sec *conf.Security) (*Data, func(), error) {
 			&UserPO{},
 			&WriteCredentialPO{},
 			&ControlActionPO{},
+			&AlertPO{},
+			&AlertChannelPO{},
+			&SyslogPO{},
+			&ConfigBackupPO{},
+			&InterfaceMetricPO{},
+			&WirelessSTAPO{},
 		); err != nil {
 			return nil, nil, err
 		}

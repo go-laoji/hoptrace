@@ -85,6 +85,7 @@ func allowed(role, op string) bool {
 		v1.OperationDeviceServiceListDevices,
 		v1.OperationDeviceServiceGetDevice,
 		v1.OperationDeviceServiceListInterfaces,
+		v1.OperationDeviceServiceListInterfaceMetrics,
 		v1.OperationEndpointServiceListEndpoints,
 		v1.OperationEndpointServiceGetEndpoint,
 		v1.OperationEndpointServiceListEvents,
@@ -92,7 +93,17 @@ func allowed(role, op string) bool {
 		v1.OperationDiscoveryServiceGetJob,
 		v1.OperationCredentialServiceListCredentials,
 		v1.OperationControlServiceListControlActions,
-		v1.OperationControlServiceListWriteCredentials:
+		v1.OperationControlServiceListWriteCredentials,
+		v1.OperationTopologyServiceTracePath,
+		v1.OperationAlertServiceListAlerts,
+		v1.OperationAlertServiceListChannels,
+		v1.OperationAlertServiceListSyslogs,
+		v1.OperationIpamServiceListSubnets,
+		v1.OperationIpamServiceGetSubnetDetail,
+		v1.OperationIpamServiceListAnomalies,
+		v1.OperationBackupServiceListBackups,
+		v1.OperationBackupServiceGetBackup,
+		v1.OperationBackupServiceDiffBackups:
 		return true
 	default:
 		return false

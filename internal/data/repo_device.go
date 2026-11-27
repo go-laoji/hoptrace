@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
@@ -193,17 +194,54 @@ func (r *deviceRepo) SaveSnapshot(ctx context.Context, d *biz.Device, s *biz.Sna
 		if err := tx.Where("device_id = ?", d.ID).Delete(&InterfacePO{}).Error; err != nil {
 			return err
 		}
+		now := time.Now()
 		if len(s.Interfaces) > 0 {
 			rows := make([]InterfacePO, 0, len(s.Interfaces))
+			var metrics []InterfaceMetricPO
 			for _, it := range s.Interfaces {
 				po := interfaceToPO(d.ID, it)
+				po.SampledAt = &now
 				if prev, ok := oldMap[it.IfIndex]; ok {
 					po.Kind, po.MACCount, po.Neighbor = prev.Kind, prev.MACCount, prev.Neighbor
+					if prev.SampledAt != nil && now.After(*prev.SampledAt) {
+						secs := now.Sub(*prev.SampledAt).Seconds()
+						if secs >= 1 {
+							if po.InOctets >= prev.InOctets && (po.InOctets > 0 || prev.InOctets > 0) {
+								po.InBps = int64(float64(po.InOctets-prev.InOctets) * 8 / secs)
+							}
+							if po.OutOctets >= prev.OutOctets && (po.OutOctets > 0 || prev.OutOctets > 0) {
+								po.OutBps = int64(float64(po.OutOctets-prev.OutOctets) * 8 / secs)
+							}
+							if po.SpeedMbps > 0 {
+								peak := po.InBps
+								if po.OutBps > peak {
+									peak = po.OutBps
+								}
+								util := float64(peak) * 100 / float64(po.SpeedMbps*1_000_000)
+								if util > 100 {
+									util = 100
+								}
+								po.UtilizationPct = math.Round(util*10) / 10
+							}
+							if po.InBps > 0 || po.OutBps > 0 || po.InErrors > 0 || po.OutErrors > 0 {
+								metrics = append(metrics, InterfaceMetricPO{
+									DeviceID: d.ID, IfIndex: po.IfIndex, At: now,
+									InBps: po.InBps, OutBps: po.OutBps, UtilizationPct: po.UtilizationPct,
+									InErrors: po.InErrors, OutErrors: po.OutErrors,
+								})
+							}
+						}
+					}
 				}
 				rows = append(rows, po)
 			}
 			if err := tx.CreateInBatches(rows, 200).Error; err != nil {
 				return err
+			}
+			if len(metrics) > 0 {
+				_ = tx.CreateInBatches(metrics, 200).Error
+				// 仅保留最近 7 天采样点
+				_ = tx.Where("at < ?", now.Add(-7*24*time.Hour)).Delete(&InterfaceMetricPO{}).Error
 			}
 		}
 
@@ -245,6 +283,21 @@ func (r *deviceRepo) SaveSnapshot(ctx context.Context, d *biz.Device, s *biz.Sna
 				return err
 			}
 		}
+
+		if err := tx.Where("device_id = ?", d.ID).Delete(&WirelessSTAPO{}).Error; err != nil {
+			return err
+		}
+		if len(s.Wireless) > 0 {
+			rows := make([]WirelessSTAPO, 0, len(s.Wireless))
+			for _, w := range s.Wireless {
+				rows = append(rows, WirelessSTAPO{
+					DeviceID: d.ID, MAC: w.MAC, IP: w.IP, SSID: w.SSID, APName: w.APName, RSSI: w.RSSI, VLAN: w.VLAN,
+				})
+			}
+			if err := tx.CreateInBatches(rows, 200).Error; err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 }
@@ -277,4 +330,44 @@ func (r *deviceRepo) ListNeighbors(ctx context.Context, deviceID uint) ([]*biz.N
 		out = append(out, neighborToBiz(&pos[i]))
 	}
 	return out, nil
+}
+
+func (r *deviceRepo) ListInterfaceMetrics(ctx context.Context, deviceID uint, ifIndex, limit int) ([]biz.InterfaceMetricPoint, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 30
+	}
+	var pos []InterfaceMetricPO
+	if err := r.data.db.WithContext(ctx).
+		Where("device_id = ? AND if_index = ?", deviceID, ifIndex).
+		Order("at desc").Limit(limit).Find(&pos).Error; err != nil {
+		return nil, err
+	}
+	out := make([]biz.InterfaceMetricPoint, 0, len(pos))
+	for i := len(pos) - 1; i >= 0; i-- {
+		p := pos[i]
+		out = append(out, biz.InterfaceMetricPoint{
+			At: p.At, InBps: p.InBps, OutBps: p.OutBps, UtilizationPct: p.UtilizationPct,
+			InErrors: p.InErrors, OutErrors: p.OutErrors,
+		})
+	}
+	return out, nil
+}
+
+func (r *deviceRepo) SaveLayout(ctx context.Context, positions []biz.NodePos) error {
+	return r.data.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, p := range positions {
+			if err := tx.Model(&DevicePO{}).Where("id = ?", p.DeviceID).Updates(map[string]any{
+				"pos_x": p.X, "pos_y": p.Y, "has_pos": true,
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *deviceRepo) ResetLayout(ctx context.Context) error {
+	return r.data.db.WithContext(ctx).Model(&DevicePO{}).Where("has_pos = ?", true).Updates(map[string]any{
+		"pos_x": 0, "pos_y": 0, "has_pos": false,
+	}).Error
 }

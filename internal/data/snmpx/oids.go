@@ -17,7 +17,11 @@ const (
 	oidIfPhysAddress = "1.3.6.1.2.1.2.2.1.6"
 	oidIfAdminStatus = "1.3.6.1.2.1.2.2.1.7"
 	oidIfOperStatus  = "1.3.6.1.2.1.2.2.1.8"
+	oidIfInErrors    = "1.3.6.1.2.1.2.2.1.14"
+	oidIfOutErrors   = "1.3.6.1.2.1.2.2.1.20"
 	oidIfName        = "1.3.6.1.2.1.31.1.1.1.1"
+	oidIfHCInOctets  = "1.3.6.1.2.1.31.1.1.1.6"
+	oidIfHCOutOctets = "1.3.6.1.2.1.31.1.1.1.10"
 	oidIfHighSpeed   = "1.3.6.1.2.1.31.1.1.1.15"
 	oidIfAlias       = "1.3.6.1.2.1.31.1.1.1.18"
 
@@ -74,4 +78,11 @@ const (
 	oidHwTrunkIfIndex = "1.3.6.1.4.1.2011.5.25.41.1.3.3.1.4"
 	// hwTrunkMemEntry: .<trunkIndex>.<memberIfIndex> -> status
 	oidHwTrunkMemStatus = "1.3.6.1.4.1.2011.5.25.41.1.4.1.1.2"
+
+	// HUAWEI-WLAN-STATION-MIB (华为无线控制器 AC STA 关联表; 索引为 6 字节 MAC 十进制)
+	oidHwWlanStaAPName = "1.3.6.1.4.1.2011.6.139.18.1.2.1.4"
+	oidHwWlanStaSSID   = "1.3.6.1.4.1.2011.6.139.18.1.2.1.19"
+	oidHwWlanStaVLAN   = "1.3.6.1.4.1.2011.6.139.18.1.2.1.24"
+	oidHwWlanStaIP     = "1.3.6.1.4.1.2011.6.139.18.1.2.1.26"
+	oidHwWlanStaRSSI   = "1.3.6.1.4.1.2011.6.139.18.1.2.1.40"
 )

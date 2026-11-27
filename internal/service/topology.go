@@ -47,19 +47,25 @@ func (s *TopologyService) GetTopology(ctx context.Context, req *v1.GetTopologyRe
 			Type:          n.Type,
 			Managed:       n.Managed,
 			EndpointCount: int32(n.EndpointCount),
+			PosX:          n.PosX,
+			PosY:          n.PosY,
+			HasPos:        n.HasPos,
 		})
 	}
 	for _, l := range t.Links {
 		reply.Links = append(reply.Links, &v1.TopoLink{
-			Id:         l.ID,
-			Source:     l.Source,
-			Target:     l.Target,
-			SourcePort: l.SourcePort,
-			TargetPort: l.TargetPort,
-			Kind:       l.Kind,
-			Confidence: l.Confidence,
-			Status:     l.Status,
-			Members:    l.Members,
+			Id:             l.ID,
+			Source:         l.Source,
+			Target:         l.Target,
+			SourcePort:     l.SourcePort,
+			TargetPort:     l.TargetPort,
+			Kind:           l.Kind,
+			Confidence:     l.Confidence,
+			Status:         l.Status,
+			Members:        l.Members,
+			InBps:          l.InBps,
+			OutBps:         l.OutBps,
+			UtilizationPct: l.UtilizationPct,
 		})
 	}
 	return reply, nil
@@ -67,6 +73,42 @@ func (s *TopologyService) GetTopology(ctx context.Context, req *v1.GetTopologyRe
 
 func (s *TopologyService) Rebuild(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	if err := s.poll.Refresh(ctx); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *TopologyService) TracePath(ctx context.Context, req *v1.TracePathRequest) (*v1.TracePathReply, error) {
+	res, err := s.uc.TracePath(ctx, req.GetSource(), req.GetTarget())
+	if err != nil {
+		return nil, err
+	}
+	reply := &v1.TracePathReply{
+		Found: res.Found, Message: res.Message, NodeIds: res.NodeIDs, LinkIds: res.LinkIDs,
+		Hops: make([]*v1.PathHop, 0, len(res.Hops)),
+	}
+	for _, h := range res.Hops {
+		reply.Hops = append(reply.Hops, &v1.PathHop{
+			NodeId: h.NodeID, Kind: h.Kind, Name: h.Name, Ip: h.IP, Role: h.Role,
+			InPort: h.InPort, OutPort: h.OutPort, LinkId: h.LinkID,
+		})
+	}
+	return reply, nil
+}
+
+func (s *TopologyService) SaveLayout(ctx context.Context, req *v1.SaveLayoutRequest) (*emptypb.Empty, error) {
+	pos := make([]biz.NodePos, 0, len(req.GetPositions()))
+	for _, p := range req.GetPositions() {
+		pos = append(pos, biz.NodePos{DeviceID: uint(p.GetDeviceId()), X: p.GetX(), Y: p.GetY()})
+	}
+	if err := s.uc.SaveLayout(ctx, pos); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *TopologyService) ResetLayout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	if err := s.uc.ResetLayout(ctx); err != nil {
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil

@@ -22,6 +22,9 @@ func NewGRPCServer(
 	dash *service.DashboardService,
 	auth *service.AuthService,
 	ctrl *service.ControlService,
+	alert *service.AlertService,
+	ipam *service.IpamService,
+	backup *service.BackupService,
 ) *grpc.Server {
 	opts := []grpc.ServerOption{
 		grpc.Middleware(
@@ -47,5 +50,8 @@ func NewGRPCServer(
 	v1.RegisterDashboardServiceServer(srv, dash)
 	v1.RegisterAuthServiceServer(srv, auth)
 	v1.RegisterControlServiceServer(srv, ctrl)
+	v1.RegisterAlertServiceServer(srv, alert)
+	v1.RegisterIpamServiceServer(srv, ipam)
+	v1.RegisterBackupServiceServer(srv, backup)
 	return srv
 }

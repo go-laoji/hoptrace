@@ -48,7 +48,10 @@ type DeviceRepo interface {
 	Delete(ctx context.Context, id uint) error
 	ListInterfaces(ctx context.Context, deviceID uint) ([]*Interface, error)
 	ListAllInterfaces(ctx context.Context) ([]*Interface, error)
-	// SaveSnapshot 在一个事务中更新设备字段并替换接口/邻居/FDB/ARP 快照。
+	ListInterfaceMetrics(ctx context.Context, deviceID uint, ifIndex, limit int) ([]InterfaceMetricPoint, error)
+	SaveLayout(ctx context.Context, positions []NodePos) error
+	ResetLayout(ctx context.Context) error
+	// SaveSnapshot 在一个事务中更新设备字段并替换接口/邻居/FDB/ARP/无线快照, 并计算速率采样。
 	SaveSnapshot(ctx context.Context, d *Device, s *Snapshot) error
 	// RecordFailure 记录采集失败;连续失败达到 offlineAfter 次后标记设备离线。
 	RecordFailure(ctx context.Context, id uint, msg string, offlineAfter int) error
@@ -71,11 +74,12 @@ type TopologyRepo interface {
 
 // EndpointFilter 终端查询过滤条件。
 type EndpointFilter struct {
-	Keyword  string
-	Status   string
-	Trust    string
-	Type     string
-	DeviceID uint
+	Keyword    string
+	Status     string
+	Trust      string
+	Type       string
+	DeviceID   uint
+	AccessType string
 }
 
 // EventFilter 事件查询过滤条件。
@@ -90,11 +94,13 @@ type EndpointRepo interface {
 	ListAll(ctx context.Context) ([]*Endpoint, error)
 	ListByDevices(ctx context.Context, deviceIDs []uint, onlineOnly bool) ([]*Endpoint, error)
 	Get(ctx context.Context, id uint) (*Endpoint, error)
+	FindByMAC(ctx context.Context, mac string) (*Endpoint, error)
 	Update(ctx context.Context, e *Endpoint) error
 	Delete(ctx context.Context, id uint) error
 	CountByDevice(ctx context.Context) (map[uint]int, error)
 	ListFdb(ctx context.Context) ([]FdbEntry, error)
 	ListArp(ctx context.Context) ([]ArpEntry, error)
+	ListWireless(ctx context.Context) ([]WirelessSTA, error)
 	// ApplyChanges 事务内落库终端变更、位置历史与事件。
 	ApplyChanges(ctx context.Context, changes []*EndpointChange, now time.Time) error
 	Locations(ctx context.Context, endpointID uint) ([]*EndpointLocation, error)

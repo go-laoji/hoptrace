@@ -22,21 +22,27 @@ type EndpointInput struct {
 	Fdb        []FdbEntry
 	Arp        []ArpEntry
 	Neighbors  []*Neighbor
+	Wireless   []WirelessSTA
 	Existing   []*Endpoint
 	Now        time.Time
 	Opts       EngineOptions
 }
 
 type candidate struct {
-	MAC      string
-	DeviceID uint
-	IfIndex  int
-	IfName   string
-	VLAN     int
-	MACCount int
-	Suspect  bool
-	HintType string
-	HintName string
+	MAC        string
+	DeviceID   uint
+	IfIndex    int
+	IfName     string
+	VLAN       int
+	MACCount   int
+	Suspect    bool
+	HintType   string
+	HintName   string
+	AccessType string
+	SSID       string
+	APName     string
+	RSSI       int
+	IP         string
 }
 
 func (c candidate) key() IfKey { return IfKey{c.DeviceID, c.IfIndex} }
@@ -167,6 +173,21 @@ func ComputeEndpointChanges(in EndpointInput) []*EndpointChange {
 			MACCount: it.MACCount, Suspect: it.Kind == IfKindSuspect, HintType: hintToType(cls), HintName: n.RemSysName})
 	}
 
+	for _, w := range in.Wireless {
+		mac := NormalizeMAC(w.MAC)
+		if !ValidEndpointMAC(mac) || self[mac] {
+			continue
+		}
+		ifName := "WLAN"
+		if w.APName != "" {
+			ifName = "AP:" + w.APName
+		}
+		add(candidate{
+			MAC: mac, DeviceID: w.DeviceID, IfIndex: 0, IfName: ifName, VLAN: w.VLAN,
+			MACCount: 1, AccessType: "wireless", SSID: w.SSID, APName: w.APName, RSSI: w.RSSI, IP: w.IP,
+		})
+	}
+
 	// 2. ARP: MAC → IPs
 	arp := map[string][]string{}
 	for _, a := range in.Arp {
@@ -175,6 +196,12 @@ func ComputeEndpointChanges(in EndpointInput) []*EndpointChange {
 			continue
 		}
 		arp[mac] = append(arp[mac], a.IP)
+	}
+	for _, w := range in.Wireless {
+		mac := NormalizeMAC(w.MAC)
+		if mac != "" && ValidEndpointIP(w.IP) {
+			arp[mac] = append(arp[mac], w.IP)
+		}
 	}
 	for m := range arp {
 		arp[m] = uniqueStrings(arp[m])
@@ -230,9 +257,14 @@ func ComputeEndpointChanges(in EndpointInput) []*EndpointChange {
 				typ = InferEndpointType(vendor, name)
 			}
 			ips := arp[mac]
+			accessType := c.AccessType
+			if accessType == "" {
+				accessType = "wired"
+			}
 			ne := &Endpoint{
 				MAC: mac, IPs: ips, Vendor: vendor, Type: typ, Name: name, Status: EndpointOnline,
 				Trust: TrustUnknown, DeviceID: c.DeviceID, IfIndex: c.IfIndex, IfName: c.IfName, VLAN: c.VLAN,
+				AccessType: accessType, SSID: c.SSID, APName: c.APName, RSSI: c.RSSI,
 				FirstSeen: now, LastSeen: now,
 			}
 			if len(ips) > 0 {
@@ -289,6 +321,13 @@ func ComputeEndpointChanges(in EndpointInput) []*EndpointChange {
 			}
 		}
 		e.DeviceName = devName[e.DeviceID]
+
+		// 无线属性更新
+		if chosen.AccessType == "wireless" {
+			e.AccessType, e.SSID, e.APName, e.RSSI = "wireless", chosen.SSID, chosen.APName, chosen.RSSI
+		} else if e.AccessType == "" {
+			e.AccessType = "wired"
+		}
 
 		// 状态
 		e.MissCount = 0

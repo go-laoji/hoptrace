@@ -20,11 +20,12 @@ func NewEndpointService(uc *biz.EndpointUsecase) *EndpointService {
 
 func (s *EndpointService) ListEndpoints(ctx context.Context, req *v1.ListEndpointsRequest) (*v1.ListEndpointsReply, error) {
 	items, total, err := s.uc.List(ctx, biz.EndpointFilter{
-		Keyword:  req.GetKeyword(),
-		Status:   req.GetStatus(),
-		Trust:    req.GetTrust(),
-		Type:     req.GetType(),
-		DeviceID: uint(req.GetDeviceId()),
+		Keyword:    req.GetKeyword(),
+		Status:     req.GetStatus(),
+		Trust:      req.GetTrust(),
+		Type:       req.GetType(),
+		DeviceID:   uint(req.GetDeviceId()),
+		AccessType: req.GetAccessType(),
 	}, int(req.GetPage()), int(req.GetPageSize()))
 	if err != nil {
 		return nil, err
@@ -99,7 +100,28 @@ func (s *EndpointService) ListEvents(ctx context.Context, req *v1.ListEventsRequ
 	return reply, nil
 }
 
+func (s *EndpointService) BatchImportEndpoints(ctx context.Context, req *v1.BatchImportEndpointsRequest) (*v1.BatchImportEndpointsReply, error) {
+	rows := make([]biz.EndpointImportRow, 0, len(req.GetItems()))
+	for _, it := range req.GetItems() {
+		rows = append(rows, biz.EndpointImportRow{
+			MAC: it.GetMac(), Name: it.GetName(), Owner: it.GetOwner(),
+			Tags: it.GetTags(), Trust: it.GetTrust(), Type: it.GetType(), Remark: it.GetRemark(),
+		})
+	}
+	res, err := s.uc.BatchImport(ctx, rows)
+	if err != nil {
+		return nil, err
+	}
+	return &v1.BatchImportEndpointsReply{
+		Updated: int32(res.Updated), Skipped: int32(res.Skipped), Errors: res.Errors,
+	}, nil
+}
+
 func toProtoEndpoint(e *biz.Endpoint) *v1.Endpoint {
+	at := e.AccessType
+	if at == "" {
+		at = "wired"
+	}
 	return &v1.Endpoint{
 		Id:         int64(e.ID),
 		Mac:        e.MAC,
@@ -121,6 +143,10 @@ func toProtoEndpoint(e *biz.Endpoint) *v1.Endpoint {
 		FirstSeen:  e.FirstSeen.Unix(),
 		LastSeen:   e.LastSeen.Unix(),
 		Remark:     e.Remark,
+		AccessType: at,
+		Ssid:       e.SSID,
+		ApName:     e.APName,
+		Rssi:       int32(e.RSSI),
 	}
 }
 

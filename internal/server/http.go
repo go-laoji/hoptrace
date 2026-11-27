@@ -29,6 +29,9 @@ func NewHTTPServer(
 	dash *service.DashboardService,
 	auth *service.AuthService,
 	ctrl *service.ControlService,
+	alert *service.AlertService,
+	ipam *service.IpamService,
+	backup *service.BackupService,
 ) *http.Server {
 	opts := []http.ServerOption{
 		http.Middleware(
@@ -59,6 +62,9 @@ func NewHTTPServer(
 	v1.RegisterDashboardServiceHTTPServer(srv, dash)
 	v1.RegisterAuthServiceHTTPServer(srv, auth)
 	v1.RegisterControlServiceHTTPServer(srv, ctrl)
+	v1.RegisterAlertServiceHTTPServer(srv, alert)
+	v1.RegisterIpamServiceHTTPServer(srv, ipam)
+	v1.RegisterBackupServiceHTTPServer(srv, backup)
 
 	// SSE 实时推送(拓扑/Trap 增量变更)
 	srv.Handle("/api/v1/events/stream", sseHandler(bus, authUC))

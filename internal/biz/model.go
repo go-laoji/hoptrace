@@ -130,6 +130,9 @@ type Device struct {
 	LastError    string
 	FailCount    int
 	ArpCount     int
+	PosX         float64
+	PosY         float64
+	HasPos       bool
 	CreatedAt    time.Time
 
 	// 查询时填充的统计字段
@@ -139,21 +142,49 @@ type Device struct {
 
 // Interface 设备接口(仅保留物理口与聚合口)。
 type Interface struct {
-	ID          uint
-	DeviceID    uint
-	IfIndex     int
-	Name        string
-	Descr       string
-	Alias       string
-	IfType      int
-	SpeedMbps   int64
-	AdminStatus string
-	OperStatus  string
-	MAC         string
-	Kind        string
-	AggIfIndex  int
-	MACCount    int
-	Neighbor    string
+	ID             uint
+	DeviceID       uint
+	IfIndex        int
+	Name           string
+	Descr          string
+	Alias          string
+	IfType         int
+	SpeedMbps      int64
+	AdminStatus    string
+	OperStatus     string
+	MAC            string
+	Kind           string
+	AggIfIndex     int
+	MACCount       int
+	Neighbor       string
+	InOctets       uint64
+	OutOctets      uint64
+	InBps          int64
+	OutBps         int64
+	UtilizationPct float64
+	InErrors       int64
+	OutErrors      int64
+}
+
+// InterfaceMetricPoint 接口历史速率与错包采样点。
+type InterfaceMetricPoint struct {
+	At             time.Time
+	InBps          int64
+	OutBps         int64
+	UtilizationPct float64
+	InErrors       int64
+	OutErrors      int64
+}
+
+// WirelessSTA 华为无线控制器(AC)采集到的无线终端关联信息。
+type WirelessSTA struct {
+	DeviceID uint
+	MAC      string
+	IP       string
+	SSID     string
+	APName   string
+	RSSI     int
+	VLAN     int
 }
 
 // Neighbor 设备上报的 LLDP 邻居。
@@ -224,6 +255,10 @@ type Endpoint struct {
 	IfIndex    int
 	IfName     string
 	VLAN       int
+	AccessType string // wired / wireless
+	SSID       string
+	APName     string
+	RSSI       int
 	FirstSeen  time.Time
 	LastSeen   time.Time
 	MissCount  int
@@ -299,6 +334,7 @@ type Snapshot struct {
 	Neighbors    []*Neighbor
 	Fdb          []FdbEntry
 	Arp          []ArpEntry
+	Wireless     []WirelessSTA
 	IPs          []string
 	ChassisMAC   string
 	Serial       string
@@ -330,23 +366,70 @@ type TopoNode struct {
 	Type          string
 	Managed       bool
 	EndpointCount int
+	PosX          float64
+	PosY          float64
+	HasPos        bool
 }
 
 type TopoLink struct {
-	ID         string
-	Source     string
-	Target     string
-	SourcePort string
-	TargetPort string
-	Kind       string
-	Confidence float64
-	Status     string
-	Members    []string
+	ID             string
+	Source         string
+	Target         string
+	SourcePort     string
+	TargetPort     string
+	Kind           string
+	Confidence     float64
+	Status         string
+	Members        []string
+	InBps          int64
+	OutBps         int64
+	UtilizationPct float64
 }
 
 type Topology struct {
 	Nodes []*TopoNode
 	Links []*TopoLink
+}
+
+type PathHop struct {
+	NodeID  string
+	Kind    string
+	Name    string
+	IP      string
+	Role    string
+	InPort  string
+	OutPort string
+	LinkID  string
+}
+
+type TraceResult struct {
+	Found   bool
+	Message string
+	Hops    []PathHop
+	NodeIDs []string
+	LinkIDs []string
+}
+
+type NodePos struct {
+	DeviceID uint
+	X        float64
+	Y        float64
+}
+
+type EndpointImportRow struct {
+	MAC    string
+	Name   string
+	Owner  string
+	Tags   []string
+	Trust  string
+	Type   string
+	Remark string
+}
+
+type BatchImportResult struct {
+	Updated int
+	Skipped int
+	Errors  []string
 }
 
 // Stats 仪表盘统计。

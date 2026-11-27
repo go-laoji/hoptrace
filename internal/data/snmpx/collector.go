@@ -84,9 +84,10 @@ func (c *Collector) Collect(ctx context.Context, t biz.Target) (*biz.Snapshot, e
 	// 7. 物理实体(序列号 / 堆叠成员数)
 	snap.Serial, snap.StackMembers = readEntity(ctx, sess)
 
-	// 8. 华为硬件健康(尽力而为)
+	// 8. 华为硬件健康与无线 AC STA 表(尽力而为)
 	if strings.HasPrefix(sys.ObjectID, "1.3.6.1.4.1.2011") {
 		snap.CPU, snap.Mem, snap.Temp = readHuaweiHealth(ctx, sess)
+		snap.Wireless = readHuaweiWirelessSTAs(ctx, sess)
 	}
 
 	return snap, nil
@@ -166,6 +167,10 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 	})
 	walkCol(oidIfAdminStatus, func(idx int, p PDU) { get(idx).AdminStatus = ifStatusStr(pduInt64(p)) })
 	walkCol(oidIfOperStatus, func(idx int, p PDU) { get(idx).OperStatus = ifStatusStr(pduInt64(p)) })
+	walkCol(oidIfHCInOctets, func(idx int, p PDU) { get(idx).InOctets = uint64(pduInt64(p)) })
+	walkCol(oidIfHCOutOctets, func(idx int, p PDU) { get(idx).OutOctets = uint64(pduInt64(p)) })
+	walkCol(oidIfInErrors, func(idx int, p PDU) { get(idx).InErrors = pduInt64(p) })
+	walkCol(oidIfOutErrors, func(idx int, p PDU) { get(idx).OutErrors = pduInt64(p) })
 
 	// LAG 成员关系: 优先标准 IEEE8023-LAG, 兜底华为 HUAWEI-IF-EXT-MIB (hwTrunk)
 	lagMapped := 0
@@ -640,6 +645,49 @@ func readHuaweiHealth(ctx context.Context, sess Session) (cpu, mem, temp int) {
 		return best
 	}
 	return maxVal(oidHwEntityCPUUsage, 1, 100), maxVal(oidHwEntityMemUsage, 1, 100), maxVal(oidHwEntityTemperature, 1, 120)
+}
+
+func readHuaweiWirelessSTAs(ctx context.Context, sess Session) []biz.WirelessSTA {
+	byMAC := map[string]*biz.WirelessSTA{}
+	get := func(mac string) *biz.WirelessSTA {
+		s := byMAC[mac]
+		if s == nil {
+			s = &biz.WirelessSTA{MAC: mac, VLAN: 1}
+			byMAC[mac] = s
+		}
+		return s
+	}
+	walkSTA := func(oid string, fn func(s *biz.WirelessSTA, p PDU)) {
+		pdus, err := sess.Walk(ctx, oid)
+		if err != nil {
+			return
+		}
+		for _, p := range pdus {
+			parts := strings.Split(suffix(p.OID, oid), ".")
+			if len(parts) < 6 {
+				continue
+			}
+			mac := oidPartsToMAC(parts[len(parts)-6:])
+			if !biz.ValidEndpointMAC(mac) {
+				continue
+			}
+			fn(get(mac), p)
+		}
+	}
+	walkSTA(oidHwWlanStaAPName, func(s *biz.WirelessSTA, p PDU) { s.APName = pduString(p) })
+	walkSTA(oidHwWlanStaSSID, func(s *biz.WirelessSTA, p PDU) { s.SSID = pduString(p) })
+	walkSTA(oidHwWlanStaVLAN, func(s *biz.WirelessSTA, p PDU) { s.VLAN = int(pduInt64(p)) })
+	walkSTA(oidHwWlanStaIP, func(s *biz.WirelessSTA, p PDU) { s.IP = pduString(p) })
+	walkSTA(oidHwWlanStaRSSI, func(s *biz.WirelessSTA, p PDU) { s.RSSI = int(pduInt64(p)) })
+
+	if len(byMAC) == 0 {
+		return nil
+	}
+	out := make([]biz.WirelessSTA, 0, len(byMAC))
+	for _, s := range byMAC {
+		out = append(out, *s)
+	}
+	return out
 }
 
 func suffix(oid, base string) string {
