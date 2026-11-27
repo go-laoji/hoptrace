@@ -57,8 +57,14 @@ const (
 	oidEntPhysicalClass     = "1.3.6.1.2.1.47.1.1.1.1.5"
 	oidEntPhysicalSerialNum = "1.3.6.1.2.1.47.1.1.1.1.11"
 
-	// HUAWEI-ENTITY-EXTENT-MIB (企业号 2011; 需真机校准)
+	// HUAWEI-ENTITY-EXTENT-MIB (企业号 2011)
 	oidHwEntityCPUUsage    = "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5"
 	oidHwEntityMemUsage    = "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7"
 	oidHwEntityTemperature = "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11"
+
+	// HUAWEI-IF-EXT-MIB (华为 Eth-Trunk 聚合口与成员映射, 已在 S9312 VRP 5.130 真机校准)
+	// hwTrunkIfIndex: .<trunkIndex> -> aggIfIndex
+	oidHwTrunkIfIndex = "1.3.6.1.4.1.2011.5.25.41.1.3.3.1.4"
+	// hwTrunkMemEntry: .<trunkIndex>.<memberIfIndex> -> status
+	oidHwTrunkMemStatus = "1.3.6.1.4.1.2011.5.25.41.1.4.1.1.2"
 )

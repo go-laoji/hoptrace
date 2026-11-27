@@ -167,7 +167,8 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 	walkCol(oidIfAdminStatus, func(idx int, p PDU) { get(idx).AdminStatus = ifStatusStr(pduInt64(p)) })
 	walkCol(oidIfOperStatus, func(idx int, p PDU) { get(idx).OperStatus = ifStatusStr(pduInt64(p)) })
 
-	// LAG 成员关系
+	// LAG 成员关系: 优先标准 IEEE8023-LAG, 兜底华为 HUAWEI-IF-EXT-MIB (hwTrunk)
+	lagMapped := 0
 	if pdus, err := sess.Walk(ctx, oidDot3adAggPortAttached); err == nil {
 		for _, p := range pdus {
 			idx, err := strconv.Atoi(suffix(p.OID, oidDot3adAggPortAttached))
@@ -178,6 +179,38 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 			if agg > 0 && agg != idx {
 				if it := byIdx[idx]; it != nil {
 					it.AggIfIndex = agg
+					lagMapped++
+				}
+			}
+		}
+	}
+	if lagMapped == 0 {
+		trunkIf := map[int]int{}
+		if pdus, err := sess.Walk(ctx, oidHwTrunkIfIndex); err == nil {
+			for _, p := range pdus {
+				tIdx, err := strconv.Atoi(suffix(p.OID, oidHwTrunkIfIndex))
+				if err == nil {
+					trunkIf[tIdx] = int(pduInt64(p))
+				}
+			}
+		}
+		if len(trunkIf) > 0 {
+			if pdus, err := sess.Walk(ctx, oidHwTrunkMemStatus); err == nil {
+				for _, p := range pdus {
+					parts := strings.Split(suffix(p.OID, oidHwTrunkMemStatus), ".")
+					if len(parts) != 2 {
+						continue
+					}
+					tIdx, err1 := strconv.Atoi(parts[0])
+					memIf, err2 := strconv.Atoi(parts[1])
+					if err1 != nil || err2 != nil {
+						continue
+					}
+					if agg := trunkIf[tIdx]; agg > 0 && agg != memIf {
+						if it := byIdx[memIf]; it != nil {
+							it.AggIfIndex = agg
+						}
+					}
 				}
 			}
 		}
@@ -190,6 +223,10 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 		}
 		if it.Name == "" {
 			it.Name = it.Descr
+		}
+		// 华为 VRP 5 的 Eth-Trunk 上报 ifType=6, 统一规范为 161 (ieee8023adLag)
+		if strings.HasPrefix(strings.ToLower(it.Name), "eth-trunk") {
+			it.IfType = 161
 		}
 		out = append(out, it)
 	}

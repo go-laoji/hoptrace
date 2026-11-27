@@ -56,8 +56,12 @@ func Identify(sysOID, sysDescr string) Fingerprint {
 	if fp.Vendor == "Huawei" {
 		if m := huaweiModelVer.FindStringSubmatch(descr); m != nil {
 			fp.Model, fp.OSVersion = m[1], m[2]
-		} else if m := huaweiModelTok.FindString(descr); m != "" {
-			fp.Model = m
+		}
+		// 类似 "Quidway S9312 ... (S9300 V200R003C00SPC500)": 若前缀包含更具体的机型(如 S9312), 优先采用具体机型
+		if specific := huaweiModelTok.FindString(descr); specific != "" {
+			if fp.Model == "" || (strings.HasSuffix(fp.Model, "00") && specific != fp.Model) {
+				fp.Model = specific
+			}
 		}
 		fp.Family = huaweiFamily(fp.Model, lower)
 		return fp
