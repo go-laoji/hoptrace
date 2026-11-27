@@ -52,6 +52,7 @@ type TopoInput struct {
 	Devices    []*Device
 	Interfaces []*Interface
 	Neighbors  []*Neighbor
+	Fdb        []FdbEntry    // 用于 LLDP 缺失时的 FDB 链路推断
 	MACCounts  map[IfKey]int // 各端口 FDB 条目数
 	ArpCounts  map[uint]int  // 各设备 ARP 条目数
 	Threshold  int           // 疑似私接 MAC 数阈值
@@ -394,6 +395,119 @@ func BuildTopology(in TopoInput) *TopoResult {
 		res.Stubs = append(res.Stubs, s)
 	}
 	sort.Slice(res.Stubs, func(i, j int) bool { return res.Stubs[i].Name < res.Stubs[j].Name })
+
+	// FDB 链路推断(AFT): 当两台已纳管设备之间无 LLDP 链路时, 若 A:pA 学到 B 的 MAC 且 B:pB 学到 A 的 MAC,
+	// 且两侧端口看到的设备集合交集为空(中间无其他交换机), 则推断 A:pA <-> B:pB 直连(confidence=0.5)。
+	if len(in.Fdb) > 0 {
+		lldpPairs := map[[2]uint]bool{}
+		for _, l := range res.Links {
+			a, b := l.ADeviceID, l.BDeviceID
+			if a > b {
+				a, b = b, a
+			}
+			lldpPairs[[2]uint{a, b}] = true
+		}
+		// portDevs[IfKey] = 该逻辑口方向学到的其他已纳管设备集合
+		portDevs := map[IfKey]map[uint]bool{}
+		for _, f := range in.Fdb {
+			src := live(devByID[f.DeviceID])
+			if src == nil || !src.Managed {
+				continue
+			}
+			dst := live(macIdx[NormalizeMAC(f.MAC)])
+			if dst == nil || !dst.Managed || dst.ID == src.ID {
+				continue
+			}
+			lIdx, _ := logicalOf(src.ID, f.IfIndex)
+			pk := IfKey{src.ID, lIdx}
+			if uplinkIf[pk] {
+				continue // 已有 LLDP 互联的端口不参与推断
+			}
+			if portDevs[pk] == nil {
+				portDevs[pk] = map[uint]bool{}
+			}
+			portDevs[pk][dst.ID] = true
+		}
+
+		// 设备对 -> 候选端口对
+		fdbKeys := make([]IfKey, 0, len(portDevs))
+		for k := range portDevs {
+			fdbKeys = append(fdbKeys, k)
+		}
+		sort.Slice(fdbKeys, func(i, j int) bool {
+			if fdbKeys[i].DeviceID != fdbKeys[j].DeviceID {
+				return fdbKeys[i].DeviceID < fdbKeys[j].DeviceID
+			}
+			return fdbKeys[i].IfIndex < fdbKeys[j].IfIndex
+		})
+
+		inferredPairs := map[[2]uint]bool{}
+		for _, pkA := range fdbKeys {
+			devsA := portDevs[pkA]
+			for bID := range devsA {
+				if pkA.DeviceID >= bID {
+					continue
+				}
+				pair := [2]uint{pkA.DeviceID, bID}
+				if lldpPairs[pair] || inferredPairs[pair] {
+					continue
+				}
+				// 在设备 B 上寻找学到了 A 的端口
+				for _, pkB := range fdbKeys {
+					if pkB.DeviceID != bID {
+						continue
+					}
+					devsB := portDevs[pkB]
+					if !devsB[pkA.DeviceID] {
+						continue
+					}
+					// 检查两侧看到的设备集合交集是否为空
+					disjoint := true
+					for x := range devsA {
+						if x != bID && devsB[x] {
+							disjoint = false
+							break
+						}
+					}
+					if !disjoint {
+						continue
+					}
+					inferredPairs[pair] = true
+					uplinkIf[pkA] = true
+					uplinkIf[pkB] = true
+
+					ai, bi := ifByKey[pkA], ifByKey[pkB]
+					aName, bName := strconv.Itoa(pkA.IfIndex), strconv.Itoa(pkB.IfIndex)
+					if ai != nil && ai.Name != "" {
+						aName = ai.Name
+					}
+					if bi != nil && bi.Name != "" {
+						bName = bi.Name
+					}
+					st := LinkUp
+					if (ai != nil && ai.OperStatus == "down") || (bi != nil && bi.OperStatus == "down") {
+						st = LinkDown
+					}
+					res.Links = append(res.Links, &Link{
+						Key:        fmt.Sprintf("%d:%d|%d:%d", pkA.DeviceID, pkA.IfIndex, pkB.DeviceID, pkB.IfIndex),
+						ADeviceID:  pkA.DeviceID,
+						AIfIndex:   pkA.IfIndex,
+						AIfName:    aName,
+						BDeviceID:  pkB.DeviceID,
+						BIfIndex:   pkB.IfIndex,
+						BIfName:    bName,
+						Kind:       "fdb",
+						Confidence: 0.5,
+						Status:     st,
+						Members:    []string{aName + " <-> " + bName},
+						FirstSeen:  in.Now,
+						LastSeen:   in.Now,
+					})
+					break
+				}
+			}
+		}
+	}
 
 	// 接口类别
 	edgeMACs := map[uint]int{}

@@ -141,3 +141,45 @@ func TestComputeEndpointChangesMoveAndOffline(t *testing.T) {
 		t.Fatalf("round5 should be offline: %+v", ep)
 	}
 }
+
+func TestBuildTopologyFDBInference(t *testing.T) {
+	// 3 台串联交换机 A(1) -- B(2) -- C(3), 全部未开启 LLDP, 仅通过 FDB 推断直连
+	devs := []*Device{
+		{ID: 1, Name: "SW-A", Managed: true, Family: FamilySwitch, ChassisMAC: "00:00:00:00:00:0a"},
+		{ID: 2, Name: "SW-B", Managed: true, Family: FamilySwitch, ChassisMAC: "00:00:00:00:00:0b"},
+		{ID: 3, Name: "SW-C", Managed: true, Family: FamilySwitch, ChassisMAC: "00:00:00:00:00:0c"},
+	}
+	ifs := []*Interface{
+		{DeviceID: 1, IfIndex: 1, Name: "GE0/0/1", IfType: 6, OperStatus: "up"},
+		{DeviceID: 2, IfIndex: 1, Name: "GE0/0/1", IfType: 6, OperStatus: "up"},
+		{DeviceID: 2, IfIndex: 2, Name: "GE0/0/2", IfType: 6, OperStatus: "up"},
+		{DeviceID: 3, IfIndex: 1, Name: "GE0/0/1", IfType: 6, OperStatus: "up"},
+	}
+	fdb := []FdbEntry{
+		// A:1 看到 B 和 C
+		{DeviceID: 1, IfIndex: 1, MAC: "00:00:00:00:00:0b", VLAN: 1},
+		{DeviceID: 1, IfIndex: 1, MAC: "00:00:00:00:00:0c", VLAN: 1},
+		// B:1 看到 A; B:2 看到 C
+		{DeviceID: 2, IfIndex: 1, MAC: "00:00:00:00:00:0a", VLAN: 1},
+		{DeviceID: 2, IfIndex: 2, MAC: "00:00:00:00:00:0c", VLAN: 1},
+		// C:1 看到 B 和 A
+		{DeviceID: 3, IfIndex: 1, MAC: "00:00:00:00:00:0b", VLAN: 1},
+		{DeviceID: 3, IfIndex: 1, MAC: "00:00:00:00:00:0a", VLAN: 1},
+	}
+
+	res := BuildTopology(TopoInput{Devices: devs, Interfaces: ifs, Fdb: fdb, Now: time.Now()})
+	if len(res.Links) != 2 {
+		t.Fatalf("expected exactly 2 inferred FDB links (A-B and B-C), got %d: %+v", len(res.Links), res.Links)
+	}
+	for _, l := range res.Links {
+		if l.Kind != "fdb" || l.Confidence != 0.5 {
+			t.Errorf("unexpected link meta: %+v", l)
+		}
+		if (l.ADeviceID == 1 && l.BDeviceID == 3) || (l.ADeviceID == 3 && l.BDeviceID == 1) {
+			t.Errorf("false direct link inferred between A and C: %+v", l)
+		}
+	}
+	if res.IfInfos[IfKey{1, 1}].Kind != IfKindUplink || res.IfInfos[IfKey{2, 2}].Kind != IfKindUplink {
+		t.Errorf("inferred FDB ports must be marked uplink: %+v", res.IfInfos)
+	}
+}
