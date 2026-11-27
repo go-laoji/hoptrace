@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// IpamService IP 地址管理与异常检测(IP 冲突 / 私接小交换机 / MAC 多口漂移)
+service IpamService {
+  rpc ListSubnets(google.protobuf.Empty) returns (ListSubnetsReply) {
+    option (google.api.http) = {get: "/api/v1/ipam/subnets"};
+  }
+  rpc GetSubnetDetail(GetSubnetDetailRequest) returns (SubnetDetail) {
+    option (google.api.http) = {get: "/api/v1/ipam/subnet"};
+  }
+  rpc ListAnomalies(google.protobuf.Empty) returns (ListAnomaliesReply) {
+    option (google.api.http) = {get: "/api/v1/ipam/anomalies"};
+  }
+}
+
+message SubnetSummary {
+  string cidr = 1;
+  int32 total_hosts = 2;
+  int32 used_hosts = 3;
+  int32 free_hosts = 4;
+  double usage_pct = 5;
+  int32 conflict_count = 6;
+  string gateway_device = 7;
+}
+
+message ListSubnetsReply {
+  repeated SubnetSummary items = 1;
+}
+
+message GetSubnetDetailRequest {
+  string cidr = 1;
+}
+
+message IpLease {
+  string ip = 1;
+  bool used = 2;
+  string mac = 3;
+  repeated string macs = 4; // >1 表示 IP 冲突
+  bool conflict = 5;
+  string vendor = 6;
+  string endpoint_name = 7;
+  string device_name = 8;
+  string if_name = 9;
+}
+
+message SubnetDetail {
+  SubnetSummary summary = 1;
+  repeated IpLease leases = 2;
+}
+
+message NetworkAnomaly {
+  // ip_conflict / suspect_hub / mac_flap
+  string kind = 1;
+  string severity = 2;
+  string target = 3;
+  string detail = 4;
+  int64 device_id = 5;
+  string device_name = 6;
+  string if_name = 7;
+}
+
+message ListAnomaliesReply {
+  repeated NetworkAnomaly items = 1;
+}

@@ -6,6 +6,157 @@ info:
     title: ""
     version: 0.0.1
 paths:
+    /api/v1/alerts:
+        get:
+            tags:
+                - AlertService
+            operationId: AlertService_ListAlerts
+            parameters:
+                - name: status
+                  in: query
+                  schema:
+                    type: string
+                - name: severity
+                  in: query
+                  schema:
+                    type: string
+                - name: kind
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListAlertsReply'
+    /api/v1/alerts/channels:
+        get:
+            tags:
+                - AlertService
+            operationId: AlertService_ListChannels
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListChannelsReply'
+        post:
+            tags:
+                - AlertService
+            operationId: AlertService_SaveChannel
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.SaveChannelRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.AlertChannel'
+    /api/v1/alerts/channels/{id}:
+        delete:
+            tags:
+                - AlertService
+            operationId: AlertService_DeleteChannel
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /api/v1/alerts/channels/{id}/test:
+        post:
+            tags:
+                - AlertService
+            operationId: AlertService_TestChannel
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.TestChannelRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.TestChannelReply'
+    /api/v1/alerts/{id}/ack:
+        post:
+            tags:
+                - AlertService
+            operationId: AlertService_AckAlert
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.AckAlertRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Alert'
+    /api/v1/alerts/{id}/resolve:
+        post:
+            tags:
+                - AlertService
+            operationId: AlertService_ResolveAlert
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.ResolveAlertRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.Alert'
     /api/v1/auth/login:
         post:
             tags:
@@ -51,6 +202,90 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/backups:
+        get:
+            tags:
+                - BackupService
+            operationId: BackupService_ListBackups
+            parameters:
+                - name: deviceId
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListBackupsReply'
+    /api/v1/backups/diff:
+        get:
+            tags:
+                - BackupService
+            operationId: BackupService_DiffBackups
+            parameters:
+                - name: fromId
+                  in: query
+                  schema:
+                    type: string
+                - name: toId
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.DiffBackupsReply'
+    /api/v1/backups/run:
+        post:
+            tags:
+                - BackupService
+            operationId: BackupService_RunBackup
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.RunBackupRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ConfigBackup'
+    /api/v1/backups/{id}:
+        get:
+            tags:
+                - BackupService
+            operationId: BackupService_GetBackup
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ConfigBackupDetail'
     /api/v1/control/actions:
         get:
             tags:
@@ -393,6 +628,35 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/hoptrace.v1.ListInterfacesReply'
+    /api/v1/devices/{deviceId}/interfaces/{ifIndex}/metrics:
+        get:
+            tags:
+                - DeviceService
+            operationId: DeviceService_ListInterfaceMetrics
+            parameters:
+                - name: deviceId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: ifIndex
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: int32
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListInterfaceMetricsReply'
     /api/v1/devices/{id}:
         get:
             tags:
@@ -561,6 +825,10 @@ paths:
                   schema:
                     type: integer
                     format: int32
+                - name: accessType
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -568,6 +836,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/hoptrace.v1.ListEndpointsReply'
+    /api/v1/endpoints/import:
+        post:
+            tags:
+                - EndpointService
+            operationId: EndpointService_BatchImportEndpoints
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.BatchImportEndpointsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.BatchImportEndpointsReply'
     /api/v1/endpoints/{id}:
         get:
             tags:
@@ -654,6 +940,83 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/hoptrace.v1.ListEventsReply'
+    /api/v1/ipam/anomalies:
+        get:
+            tags:
+                - IpamService
+            operationId: IpamService_ListAnomalies
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListAnomaliesReply'
+    /api/v1/ipam/subnet:
+        get:
+            tags:
+                - IpamService
+            operationId: IpamService_GetSubnetDetail
+            parameters:
+                - name: cidr
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.SubnetDetail'
+    /api/v1/ipam/subnets:
+        get:
+            tags:
+                - IpamService
+            operationId: IpamService_ListSubnets
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListSubnetsReply'
+    /api/v1/syslogs:
+        get:
+            tags:
+                - AlertService
+            operationId: AlertService_ListSyslogs
+            parameters:
+                - name: keyword
+                  in: query
+                  schema:
+                    type: string
+                - name: sourceIp
+                  in: query
+                  schema:
+                    type: string
+                - name: maxSeverity
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.ListSyslogsReply'
     /api/v1/topology:
         get:
             tags:
@@ -683,6 +1046,31 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/hoptrace.v1.Topology'
+    /api/v1/topology/layout:
+        post:
+            tags:
+                - TopologyService
+            description: 保存手工微调后的节点坐标
+            operationId: TopologyService_SaveLayout
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/hoptrace.v1.SaveLayoutRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+        delete:
+            tags:
+                - TopologyService
+            description: 重置所有节点自定义坐标
+            operationId: TopologyService_ResetLayout
+            responses:
+                "200":
+                    description: OK
+                    content: {}
     /api/v1/topology/rebuild:
         post:
             tags:
@@ -697,6 +1085,28 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/topology/trace:
+        get:
+            tags:
+                - TopologyService
+            description: '路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)'
+            operationId: TopologyService_TracePath
+            parameters:
+                - name: source
+                  in: query
+                  schema:
+                    type: string
+                - name: target
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/hoptrace.v1.TracePathReply'
     /api/v1/users:
         get:
             tags:
@@ -743,6 +1153,61 @@ paths:
                     content: {}
 components:
     schemas:
+        hoptrace.v1.AckAlertRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+        hoptrace.v1.Alert:
+            type: object
+            properties:
+                id:
+                    type: string
+                kind:
+                    type: string
+                    description: device_offline / link_down / new_endpoint / endpoint_moved / ip_conflict / suspect_hub / syslog_security
+                severity:
+                    type: string
+                title:
+                    type: string
+                message:
+                    type: string
+                targetKey:
+                    type: string
+                deviceId:
+                    type: string
+                endpointId:
+                    type: string
+                status:
+                    type: string
+                ackedBy:
+                    type: string
+                createdAt:
+                    type: string
+                updatedAt:
+                    type: string
+        hoptrace.v1.AlertChannel:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                kind:
+                    type: string
+                    description: wecom / dingtalk / feishu / webhook
+                webhookUrl:
+                    type: string
+                secret:
+                    type: string
+                enabled:
+                    type: boolean
+                kinds:
+                    type: array
+                    items:
+                        type: string
+                createdAt:
+                    type: string
         hoptrace.v1.ApproveControlActionRequest:
             type: object
             properties:
@@ -750,12 +1215,63 @@ components:
                     type: string
                 autoExecute:
                     type: boolean
+        hoptrace.v1.BatchImportEndpointsReply:
+            type: object
+            properties:
+                updated:
+                    type: integer
+                    format: int32
+                skipped:
+                    type: integer
+                    format: int32
+                errors:
+                    type: array
+                    items:
+                        type: string
+        hoptrace.v1.BatchImportEndpointsRequest:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.EndpointImportRow'
         hoptrace.v1.ChangePasswordRequest:
             type: object
             properties:
                 oldPassword:
                     type: string
                 newPassword:
+                    type: string
+        hoptrace.v1.ConfigBackup:
+            type: object
+            properties:
+                id:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+                sha256:
+                    type: string
+                sizeBytes:
+                    type: integer
+                    format: int32
+                changed:
+                    type: boolean
+                trigger:
+                    type: string
+                status:
+                    type: string
+                error:
+                    type: string
+                createdAt:
+                    type: string
+        hoptrace.v1.ConfigBackupDetail:
+            type: object
+            properties:
+                meta:
+                    $ref: '#/components/schemas/hoptrace.v1.ConfigBackup'
+                content:
                     type: string
         hoptrace.v1.ControlAction:
             type: object
@@ -996,6 +1512,36 @@ components:
                 endpointCount:
                     type: integer
                     format: int32
+        hoptrace.v1.DiffBackupsReply:
+            type: object
+            properties:
+                from:
+                    $ref: '#/components/schemas/hoptrace.v1.ConfigBackup'
+                to:
+                    $ref: '#/components/schemas/hoptrace.v1.ConfigBackup'
+                added:
+                    type: integer
+                    format: int32
+                removed:
+                    type: integer
+                    format: int32
+                lines:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.DiffLine'
+        hoptrace.v1.DiffLine:
+            type: object
+            properties:
+                kind:
+                    type: string
+                oldLine:
+                    type: integer
+                    format: int32
+                newLine:
+                    type: integer
+                    format: int32
+                text:
+                    type: string
         hoptrace.v1.DiscoveryJob:
             type: object
             properties:
@@ -1075,6 +1621,15 @@ components:
                     type: string
                 remark:
                     type: string
+                accessType:
+                    type: string
+                ssid:
+                    type: string
+                apName:
+                    type: string
+                rssi:
+                    type: integer
+                    format: int32
         hoptrace.v1.EndpointDetail:
             type: object
             properties:
@@ -1106,6 +1661,25 @@ components:
                 detail:
                     type: string
                 at:
+                    type: string
+        hoptrace.v1.EndpointImportRow:
+            type: object
+            properties:
+                mac:
+                    type: string
+                name:
+                    type: string
+                owner:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+                trust:
+                    type: string
+                type:
+                    type: string
+                remark:
                     type: string
         hoptrace.v1.EndpointLocation:
             type: object
@@ -1167,6 +1741,56 @@ components:
                     format: int32
                 neighbor:
                     type: string
+                inBps:
+                    type: string
+                outBps:
+                    type: string
+                utilizationPct:
+                    type: number
+                    format: double
+                inErrors:
+                    type: string
+                outErrors:
+                    type: string
+        hoptrace.v1.InterfaceMetricPoint:
+            type: object
+            properties:
+                at:
+                    type: string
+                inBps:
+                    type: string
+                outBps:
+                    type: string
+                utilizationPct:
+                    type: number
+                    format: double
+                inErrors:
+                    type: string
+                outErrors:
+                    type: string
+        hoptrace.v1.IpLease:
+            type: object
+            properties:
+                ip:
+                    type: string
+                used:
+                    type: boolean
+                mac:
+                    type: string
+                macs:
+                    type: array
+                    items:
+                        type: string
+                conflict:
+                    type: boolean
+                vendor:
+                    type: string
+                endpointName:
+                    type: string
+                deviceName:
+                    type: string
+                ifName:
+                    type: string
         hoptrace.v1.KV:
             type: object
             properties:
@@ -1174,6 +1798,38 @@ components:
                     type: string
                 value:
                     type: string
+        hoptrace.v1.ListAlertsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.Alert'
+                total:
+                    type: string
+        hoptrace.v1.ListAnomaliesReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.NetworkAnomaly'
+        hoptrace.v1.ListBackupsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.ConfigBackup'
+                total:
+                    type: string
+        hoptrace.v1.ListChannelsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.AlertChannel'
         hoptrace.v1.ListControlActionsReply:
             type: object
             properties:
@@ -1217,6 +1873,13 @@ components:
                         $ref: '#/components/schemas/hoptrace.v1.EndpointEvent'
                 total:
                     type: string
+        hoptrace.v1.ListInterfaceMetricsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.InterfaceMetricPoint'
         hoptrace.v1.ListInterfacesReply:
             type: object
             properties:
@@ -1231,6 +1894,22 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/hoptrace.v1.DiscoveryJob'
+        hoptrace.v1.ListSubnetsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.SubnetSummary'
+        hoptrace.v1.ListSyslogsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.SyslogEntry'
+                total:
+                    type: string
         hoptrace.v1.ListUsersReply:
             type: object
             properties:
@@ -1261,6 +1940,54 @@ components:
                     type: string
                 password:
                     type: string
+        hoptrace.v1.NetworkAnomaly:
+            type: object
+            properties:
+                kind:
+                    type: string
+                    description: ip_conflict / suspect_hub / mac_flap
+                severity:
+                    type: string
+                target:
+                    type: string
+                detail:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+                ifName:
+                    type: string
+        hoptrace.v1.NodePosition:
+            type: object
+            properties:
+                deviceId:
+                    type: string
+                x:
+                    type: number
+                    format: double
+                y:
+                    type: number
+                    format: double
+        hoptrace.v1.PathHop:
+            type: object
+            properties:
+                nodeId:
+                    type: string
+                kind:
+                    type: string
+                name:
+                    type: string
+                ip:
+                    type: string
+                role:
+                    type: string
+                inPort:
+                    type: string
+                outPort:
+                    type: string
+                linkId:
+                    type: string
         hoptrace.v1.PollDeviceRequest:
             type: object
             properties:
@@ -1273,11 +2000,40 @@ components:
                     type: string
                 reason:
                     type: string
+        hoptrace.v1.ResolveAlertRequest:
+            type: object
+            properties:
+                id:
+                    type: string
         hoptrace.v1.RollbackControlActionRequest:
             type: object
             properties:
                 id:
                     type: string
+        hoptrace.v1.RunBackupRequest:
+            type: object
+            properties:
+                deviceId:
+                    type: string
+        hoptrace.v1.SaveChannelRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                kind:
+                    type: string
+                webhookUrl:
+                    type: string
+                secret:
+                    type: string
+                enabled:
+                    type: boolean
+                kinds:
+                    type: array
+                    items:
+                        type: string
         hoptrace.v1.SaveCredentialRequest:
             type: object
             properties:
@@ -1302,6 +2058,13 @@ components:
                 port:
                     type: integer
                     format: int32
+        hoptrace.v1.SaveLayoutRequest:
+            type: object
+            properties:
+                positions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.NodePosition'
         hoptrace.v1.SaveWriteCredentialRequest:
             type: object
             properties:
@@ -1342,6 +2105,71 @@ components:
                     format: int32
                 site:
                     type: string
+        hoptrace.v1.SubnetDetail:
+            type: object
+            properties:
+                summary:
+                    $ref: '#/components/schemas/hoptrace.v1.SubnetSummary'
+                leases:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.IpLease'
+        hoptrace.v1.SubnetSummary:
+            type: object
+            properties:
+                cidr:
+                    type: string
+                totalHosts:
+                    type: integer
+                    format: int32
+                usedHosts:
+                    type: integer
+                    format: int32
+                freeHosts:
+                    type: integer
+                    format: int32
+                usagePct:
+                    type: number
+                    format: double
+                conflictCount:
+                    type: integer
+                    format: int32
+                gatewayDevice:
+                    type: string
+        hoptrace.v1.SyslogEntry:
+            type: object
+            properties:
+                id:
+                    type: string
+                sourceIp:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+                severity:
+                    type: integer
+                    format: int32
+                facility:
+                    type: string
+                tag:
+                    type: string
+                message:
+                    type: string
+                receivedAt:
+                    type: string
+        hoptrace.v1.TestChannelReply:
+            type: object
+            properties:
+                ok:
+                    type: boolean
+                detail:
+                    type: string
+        hoptrace.v1.TestChannelRequest:
+            type: object
+            properties:
+                id:
+                    type: string
         hoptrace.v1.TopoLink:
             type: object
             properties:
@@ -1366,6 +2194,13 @@ components:
                     type: array
                     items:
                         type: string
+                inBps:
+                    type: string
+                outBps:
+                    type: string
+                utilizationPct:
+                    type: number
+                    format: double
         hoptrace.v1.TopoNode:
             type: object
             properties:
@@ -1396,6 +2231,14 @@ components:
                 endpointCount:
                     type: integer
                     format: int32
+                posX:
+                    type: number
+                    format: double
+                posY:
+                    type: number
+                    format: double
+                hasPos:
+                    type: boolean
         hoptrace.v1.Topology:
             type: object
             properties:
@@ -1407,6 +2250,25 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/hoptrace.v1.TopoLink'
+        hoptrace.v1.TracePathReply:
+            type: object
+            properties:
+                found:
+                    type: boolean
+                message:
+                    type: string
+                hops:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/hoptrace.v1.PathHop'
+                nodeIds:
+                    type: array
+                    items:
+                        type: string
+                linkIds:
+                    type: array
+                    items:
+                        type: string
         hoptrace.v1.UpdateDeviceRequest:
             type: object
             properties:
@@ -1475,8 +2337,12 @@ components:
                 createdAt:
                     type: string
 tags:
+    - name: AlertService
+      description: AlertService 实时告警中心、Webhook 通知渠道与 Syslog 日志查询
     - name: AuthService
       description: AuthService 登录鉴权与用户管理(RBAC)
+    - name: BackupService
+      description: BackupService 设备运行配置定时备份与版本 Diff
     - name: ControlService
       description: ControlService 设备端口管控、终端封禁审批流与回滚(M2)
     - name: CredentialService
@@ -1489,5 +2355,7 @@ tags:
       description: DiscoveryService 设备发现任务
     - name: EndpointService
       description: EndpointService 终端管理
+    - name: IpamService
+      description: IpamService IP 地址管理与异常检测(IP 冲突 / 私接小交换机 / MAC 多口漂移)
     - name: TopologyService
       description: TopologyService 拓扑查询

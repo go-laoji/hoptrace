@@ -18,6 +18,7 @@ var _ = new(context.Context)
 
 const _ = http.SupportPackageIsVersion3
 
+const OperationEndpointServiceBatchImportEndpoints = "/hoptrace.v1.EndpointService/BatchImportEndpoints"
 const OperationEndpointServiceDeleteEndpoint = "/hoptrace.v1.EndpointService/DeleteEndpoint"
 const OperationEndpointServiceGetEndpoint = "/hoptrace.v1.EndpointService/GetEndpoint"
 const OperationEndpointServiceListEndpoints = "/hoptrace.v1.EndpointService/ListEndpoints"
@@ -25,6 +26,7 @@ const OperationEndpointServiceListEvents = "/hoptrace.v1.EndpointService/ListEve
 const OperationEndpointServiceUpdateEndpoint = "/hoptrace.v1.EndpointService/UpdateEndpoint"
 
 type EndpointServiceHTTPServer interface {
+	BatchImportEndpoints(context.Context, *BatchImportEndpointsRequest) (*BatchImportEndpointsReply, error)
 	DeleteEndpoint(context.Context, *DeleteEndpointRequest) (*emptypb.Empty, error)
 	GetEndpoint(context.Context, *GetEndpointRequest) (*EndpointDetail, error)
 	ListEndpoints(context.Context, *ListEndpointsRequest) (*ListEndpointsReply, error)
@@ -39,6 +41,7 @@ func RegisterEndpointServiceHTTPServer(s *http.Server, srv EndpointServiceHTTPSe
 	r.Handle("PUT", "/api/v1/endpoints/{id}", _EndpointService_UpdateEndpoint0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/endpoints/{id}", _EndpointService_DeleteEndpoint0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/events", _EndpointService_ListEvents0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/endpoints/import", _EndpointService_BatchImportEndpoints0_HTTP_Handler(srv))
 }
 
 func _EndpointService_ListEndpoints0_HTTP_Handler(srv EndpointServiceHTTPServer) func(ctx http.Context) error {
@@ -145,7 +148,27 @@ func _EndpointService_ListEvents0_HTTP_Handler(srv EndpointServiceHTTPServer) fu
 	}
 }
 
+func _EndpointService_BatchImportEndpoints0_HTTP_Handler(srv EndpointServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in BatchImportEndpointsRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationEndpointServiceBatchImportEndpoints)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.BatchImportEndpoints(ctx, req.(*BatchImportEndpointsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*BatchImportEndpointsReply)
+		return ctx.Result(200, reply)
+	}
+}
+
 type EndpointServiceHTTPClient interface {
+	BatchImportEndpoints(ctx context.Context, req *BatchImportEndpointsRequest, opts ...http.CallOption) (rsp *BatchImportEndpointsReply, err error)
 	DeleteEndpoint(ctx context.Context, req *DeleteEndpointRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 	GetEndpoint(ctx context.Context, req *GetEndpointRequest, opts ...http.CallOption) (rsp *EndpointDetail, err error)
 	ListEndpoints(ctx context.Context, req *ListEndpointsRequest, opts ...http.CallOption) (rsp *ListEndpointsReply, err error)
@@ -159,6 +182,23 @@ type EndpointServiceHTTPClientImpl struct {
 
 func NewEndpointServiceHTTPClient(client *http.Client) EndpointServiceHTTPClient {
 	return &EndpointServiceHTTPClientImpl{client}
+}
+
+func (c *EndpointServiceHTTPClientImpl) BatchImportEndpoints(ctx context.Context, in *BatchImportEndpointsRequest, opts ...http.CallOption) (*BatchImportEndpointsReply, error) {
+	var out BatchImportEndpointsReply
+	pattern := "/api/v1/endpoints/import"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationEndpointServiceBatchImportEndpoints),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 func (c *EndpointServiceHTTPClientImpl) DeleteEndpoint(ctx context.Context, in *DeleteEndpointRequest, opts ...http.CallOption) (*emptypb.Empty, error) {

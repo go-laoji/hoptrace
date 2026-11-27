@@ -20,17 +20,29 @@ const _ = http.SupportPackageIsVersion3
 
 const OperationTopologyServiceGetTopology = "/hoptrace.v1.TopologyService/GetTopology"
 const OperationTopologyServiceRebuild = "/hoptrace.v1.TopologyService/Rebuild"
+const OperationTopologyServiceResetLayout = "/hoptrace.v1.TopologyService/ResetLayout"
+const OperationTopologyServiceSaveLayout = "/hoptrace.v1.TopologyService/SaveLayout"
+const OperationTopologyServiceTracePath = "/hoptrace.v1.TopologyService/TracePath"
 
 type TopologyServiceHTTPServer interface {
 	GetTopology(context.Context, *GetTopologyRequest) (*Topology, error)
 	// Rebuild 手动触发拓扑重建与终端同步
 	Rebuild(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// ResetLayout 重置所有节点自定义坐标
+	ResetLayout(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// SaveLayout 保存手工微调后的节点坐标
+	SaveLayout(context.Context, *SaveLayoutRequest) (*emptypb.Empty, error)
+	// TracePath 路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)
+	TracePath(context.Context, *TracePathRequest) (*TracePathReply, error)
 }
 
 func RegisterTopologyServiceHTTPServer(s *http.Server, srv TopologyServiceHTTPServer) {
 	r := s.Route("/")
 	r.Handle("GET", "/api/v1/topology", _TopologyService_GetTopology0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/topology/rebuild", _TopologyService_Rebuild0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/topology/trace", _TopologyService_TracePath0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/topology/layout", _TopologyService_SaveLayout0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/topology/layout", _TopologyService_ResetLayout0_HTTP_Handler(srv))
 }
 
 func _TopologyService_GetTopology0_HTTP_Handler(srv TopologyServiceHTTPServer) func(ctx http.Context) error {
@@ -71,10 +83,73 @@ func _TopologyService_Rebuild0_HTTP_Handler(srv TopologyServiceHTTPServer) func(
 	}
 }
 
+func _TopologyService_TracePath0_HTTP_Handler(srv TopologyServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in TracePathRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationTopologyServiceTracePath)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.TracePath(ctx, req.(*TracePathRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*TracePathReply)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _TopologyService_SaveLayout0_HTTP_Handler(srv TopologyServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SaveLayoutRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationTopologyServiceSaveLayout)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SaveLayout(ctx, req.(*SaveLayoutRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*emptypb.Empty)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _TopologyService_ResetLayout0_HTTP_Handler(srv TopologyServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in emptypb.Empty
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationTopologyServiceResetLayout)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ResetLayout(ctx, req.(*emptypb.Empty))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*emptypb.Empty)
+		return ctx.Result(200, reply)
+	}
+}
+
 type TopologyServiceHTTPClient interface {
 	GetTopology(ctx context.Context, req *GetTopologyRequest, opts ...http.CallOption) (rsp *Topology, err error)
 	// Rebuild 手动触发拓扑重建与终端同步
 	Rebuild(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
+	// ResetLayout 重置所有节点自定义坐标
+	ResetLayout(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
+	// SaveLayout 保存手工微调后的节点坐标
+	SaveLayout(ctx context.Context, req *SaveLayoutRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
+	// TracePath 路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)
+	TracePath(ctx context.Context, req *TracePathRequest, opts ...http.CallOption) (rsp *TracePathReply, err error)
 }
 
 type TopologyServiceHTTPClientImpl struct {
@@ -113,6 +188,58 @@ func (c *TopologyServiceHTTPClientImpl) Rebuild(ctx context.Context, in *emptypb
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ResetLayout 重置所有节点自定义坐标
+func (c *TopologyServiceHTTPClientImpl) ResetLayout(ctx context.Context, in *emptypb.Empty, opts ...http.CallOption) (*emptypb.Empty, error) {
+	var out emptypb.Empty
+	pattern := "/api/v1/topology/layout"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationTopologyServiceResetLayout),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// SaveLayout 保存手工微调后的节点坐标
+func (c *TopologyServiceHTTPClientImpl) SaveLayout(ctx context.Context, in *SaveLayoutRequest, opts ...http.CallOption) (*emptypb.Empty, error) {
+	var out emptypb.Empty
+	pattern := "/api/v1/topology/layout"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationTopologyServiceSaveLayout),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// TracePath 路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)
+func (c *TopologyServiceHTTPClientImpl) TracePath(ctx context.Context, in *TracePathRequest, opts ...http.CallOption) (*TracePathReply, error) {
+	var out TracePathReply
+	pattern := "/api/v1/topology/trace"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationTopologyServiceTracePath),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

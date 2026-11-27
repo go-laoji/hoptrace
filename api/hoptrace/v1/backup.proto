@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// BackupService 设备运行配置定时备份与版本 Diff
+service BackupService {
+  rpc ListBackups(ListBackupsRequest) returns (ListBackupsReply) {
+    option (google.api.http) = {get: "/api/v1/backups"};
+  }
+  rpc RunBackup(RunBackupRequest) returns (ConfigBackup) {
+    option (google.api.http) = {
+      post: "/api/v1/backups/run"
+      body: "*"
+    };
+  }
+  rpc GetBackup(GetBackupRequest) returns (ConfigBackupDetail) {
+    option (google.api.http) = {get: "/api/v1/backups/{id}"};
+  }
+  rpc DiffBackups(DiffBackupsRequest) returns (DiffBackupsReply) {
+    option (google.api.http) = {get: "/api/v1/backups/diff"};
+  }
+}
+
+message ConfigBackup {
+  int64 id = 1;
+  int64 device_id = 2;
+  string device_name = 3;
+  string sha256 = 4;
+  int32 size_bytes = 5;
+  bool changed = 6;
+  string trigger = 7; // manual / scheduled
+  string status = 8; // ok / failed
+  string error = 9;
+  int64 created_at = 10;
+}
+
+message ConfigBackupDetail {
+  ConfigBackup meta = 1;
+  string content = 2;
+}
+
+message ListBackupsRequest {
+  int64 device_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListBackupsReply {
+  repeated ConfigBackup items = 1;
+  int64 total = 2;
+}
+
+message RunBackupRequest {
+  int64 device_id = 1;
+}
+
+message GetBackupRequest {
+  int64 id = 1;
+}
+
+message DiffBackupsRequest {
+  int64 from_id = 1;
+  int64 to_id = 2;
+}
+
+message DiffLine {
+  string kind = 1; // context / add / del
+  int32 old_line = 2;
+  int32 new_line = 3;
+  string text = 4;
+}
+
+message DiffBackupsReply {
+  ConfigBackup from = 1;
+  ConfigBackup to = 2;
+  int32 added = 3;
+  int32 removed = 4;
+  repeated DiffLine lines = 5;
+}

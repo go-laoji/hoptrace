@@ -32,6 +32,10 @@ collector:
   # SNMP Trap 监听地址(接收 linkUp/linkDown 触发增量重扫); 留空则关闭
   trap_addr: ${TRAP_ADDR:0.0.0.0:1162}
   trap_debounce: 15s
+  # UDP Syslog 监听地址(接收华为端口安全/环路/登录审计日志); 留空则关闭
+  syslog_addr: ${SYSLOG_ADDR:0.0.0.0:1514}
+  # 设备运行配置自动备份周期(86400s = 每天一次); 0s 关闭自动备份
+  backup_interval: 86400s
 
 security:
   # 生产环境请通过 HOPTRACE_SECURITY_SECRET_KEY 环境变量注入

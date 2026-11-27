@@ -744,23 +744,28 @@ func (x *PollDeviceRequest) GetId() int64 {
 }
 
 type Interface struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	DeviceId      int64                  `protobuf:"varint,2,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
-	IfIndex       int32                  `protobuf:"varint,3,opt,name=if_index,json=ifIndex,proto3" json:"if_index,omitempty"`
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Descr         string                 `protobuf:"bytes,5,opt,name=descr,proto3" json:"descr,omitempty"`
-	Alias         string                 `protobuf:"bytes,6,opt,name=alias,proto3" json:"alias,omitempty"`
-	SpeedMbps     int64                  `protobuf:"varint,7,opt,name=speed_mbps,json=speedMbps,proto3" json:"speed_mbps,omitempty"`
-	AdminStatus   string                 `protobuf:"bytes,8,opt,name=admin_status,json=adminStatus,proto3" json:"admin_status,omitempty"`
-	OperStatus    string                 `protobuf:"bytes,9,opt,name=oper_status,json=operStatus,proto3" json:"oper_status,omitempty"`
-	Mac           string                 `protobuf:"bytes,10,opt,name=mac,proto3" json:"mac,omitempty"`
-	Kind          string                 `protobuf:"bytes,11,opt,name=kind,proto3" json:"kind,omitempty"` // uplink / edge / suspect / lag / lag_member
-	AggIfIndex    int32                  `protobuf:"varint,12,opt,name=agg_if_index,json=aggIfIndex,proto3" json:"agg_if_index,omitempty"`
-	MacCount      int32                  `protobuf:"varint,13,opt,name=mac_count,json=macCount,proto3" json:"mac_count,omitempty"`
-	Neighbor      string                 `protobuf:"bytes,14,opt,name=neighbor,proto3" json:"neighbor,omitempty"` // 对端描述
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	DeviceId       int64                  `protobuf:"varint,2,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	IfIndex        int32                  `protobuf:"varint,3,opt,name=if_index,json=ifIndex,proto3" json:"if_index,omitempty"`
+	Name           string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Descr          string                 `protobuf:"bytes,5,opt,name=descr,proto3" json:"descr,omitempty"`
+	Alias          string                 `protobuf:"bytes,6,opt,name=alias,proto3" json:"alias,omitempty"`
+	SpeedMbps      int64                  `protobuf:"varint,7,opt,name=speed_mbps,json=speedMbps,proto3" json:"speed_mbps,omitempty"`
+	AdminStatus    string                 `protobuf:"bytes,8,opt,name=admin_status,json=adminStatus,proto3" json:"admin_status,omitempty"`
+	OperStatus     string                 `protobuf:"bytes,9,opt,name=oper_status,json=operStatus,proto3" json:"oper_status,omitempty"`
+	Mac            string                 `protobuf:"bytes,10,opt,name=mac,proto3" json:"mac,omitempty"`
+	Kind           string                 `protobuf:"bytes,11,opt,name=kind,proto3" json:"kind,omitempty"` // uplink / edge / suspect / lag / lag_member
+	AggIfIndex     int32                  `protobuf:"varint,12,opt,name=agg_if_index,json=aggIfIndex,proto3" json:"agg_if_index,omitempty"`
+	MacCount       int32                  `protobuf:"varint,13,opt,name=mac_count,json=macCount,proto3" json:"mac_count,omitempty"`
+	Neighbor       string                 `protobuf:"bytes,14,opt,name=neighbor,proto3" json:"neighbor,omitempty"` // 对端描述
+	InBps          int64                  `protobuf:"varint,15,opt,name=in_bps,json=inBps,proto3" json:"in_bps,omitempty"`
+	OutBps         int64                  `protobuf:"varint,16,opt,name=out_bps,json=outBps,proto3" json:"out_bps,omitempty"`
+	UtilizationPct float64                `protobuf:"fixed64,17,opt,name=utilization_pct,json=utilizationPct,proto3" json:"utilization_pct,omitempty"`
+	InErrors       int64                  `protobuf:"varint,18,opt,name=in_errors,json=inErrors,proto3" json:"in_errors,omitempty"`
+	OutErrors      int64                  `protobuf:"varint,19,opt,name=out_errors,json=outErrors,proto3" json:"out_errors,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Interface) Reset() {
@@ -891,6 +896,41 @@ func (x *Interface) GetNeighbor() string {
 	return ""
 }
 
+func (x *Interface) GetInBps() int64 {
+	if x != nil {
+		return x.InBps
+	}
+	return 0
+}
+
+func (x *Interface) GetOutBps() int64 {
+	if x != nil {
+		return x.OutBps
+	}
+	return 0
+}
+
+func (x *Interface) GetUtilizationPct() float64 {
+	if x != nil {
+		return x.UtilizationPct
+	}
+	return 0
+}
+
+func (x *Interface) GetInErrors() int64 {
+	if x != nil {
+		return x.InErrors
+	}
+	return 0
+}
+
+func (x *Interface) GetOutErrors() int64 {
+	if x != nil {
+		return x.OutErrors
+	}
+	return 0
+}
+
 type ListInterfacesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DeviceId      int64                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
@@ -979,6 +1019,194 @@ func (x *ListInterfacesReply) GetItems() []*Interface {
 	return nil
 }
 
+type ListInterfaceMetricsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeviceId      int64                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	IfIndex       int32                  `protobuf:"varint,2,opt,name=if_index,json=ifIndex,proto3" json:"if_index,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInterfaceMetricsRequest) Reset() {
+	*x = ListInterfaceMetricsRequest{}
+	mi := &file_hoptrace_v1_device_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInterfaceMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInterfaceMetricsRequest) ProtoMessage() {}
+
+func (x *ListInterfaceMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_device_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInterfaceMetricsRequest.ProtoReflect.Descriptor instead.
+func (*ListInterfaceMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_device_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListInterfaceMetricsRequest) GetDeviceId() int64 {
+	if x != nil {
+		return x.DeviceId
+	}
+	return 0
+}
+
+func (x *ListInterfaceMetricsRequest) GetIfIndex() int32 {
+	if x != nil {
+		return x.IfIndex
+	}
+	return 0
+}
+
+func (x *ListInterfaceMetricsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type InterfaceMetricPoint struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	At             int64                  `protobuf:"varint,1,opt,name=at,proto3" json:"at,omitempty"`
+	InBps          int64                  `protobuf:"varint,2,opt,name=in_bps,json=inBps,proto3" json:"in_bps,omitempty"`
+	OutBps         int64                  `protobuf:"varint,3,opt,name=out_bps,json=outBps,proto3" json:"out_bps,omitempty"`
+	UtilizationPct float64                `protobuf:"fixed64,4,opt,name=utilization_pct,json=utilizationPct,proto3" json:"utilization_pct,omitempty"`
+	InErrors       int64                  `protobuf:"varint,5,opt,name=in_errors,json=inErrors,proto3" json:"in_errors,omitempty"`
+	OutErrors      int64                  `protobuf:"varint,6,opt,name=out_errors,json=outErrors,proto3" json:"out_errors,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InterfaceMetricPoint) Reset() {
+	*x = InterfaceMetricPoint{}
+	mi := &file_hoptrace_v1_device_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterfaceMetricPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterfaceMetricPoint) ProtoMessage() {}
+
+func (x *InterfaceMetricPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_device_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterfaceMetricPoint.ProtoReflect.Descriptor instead.
+func (*InterfaceMetricPoint) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_device_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *InterfaceMetricPoint) GetAt() int64 {
+	if x != nil {
+		return x.At
+	}
+	return 0
+}
+
+func (x *InterfaceMetricPoint) GetInBps() int64 {
+	if x != nil {
+		return x.InBps
+	}
+	return 0
+}
+
+func (x *InterfaceMetricPoint) GetOutBps() int64 {
+	if x != nil {
+		return x.OutBps
+	}
+	return 0
+}
+
+func (x *InterfaceMetricPoint) GetUtilizationPct() float64 {
+	if x != nil {
+		return x.UtilizationPct
+	}
+	return 0
+}
+
+func (x *InterfaceMetricPoint) GetInErrors() int64 {
+	if x != nil {
+		return x.InErrors
+	}
+	return 0
+}
+
+func (x *InterfaceMetricPoint) GetOutErrors() int64 {
+	if x != nil {
+		return x.OutErrors
+	}
+	return 0
+}
+
+type ListInterfaceMetricsReply struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Items         []*InterfaceMetricPoint `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInterfaceMetricsReply) Reset() {
+	*x = ListInterfaceMetricsReply{}
+	mi := &file_hoptrace_v1_device_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInterfaceMetricsReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInterfaceMetricsReply) ProtoMessage() {}
+
+func (x *ListInterfaceMetricsReply) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_device_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInterfaceMetricsReply.ProtoReflect.Descriptor instead.
+func (*ListInterfaceMetricsReply) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_device_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListInterfaceMetricsReply) GetItems() []*InterfaceMetricPoint {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_hoptrace_v1_device_proto protoreflect.FileDescriptor
 
 const file_hoptrace_v1_device_proto_rawDesc = "" +
@@ -1052,7 +1280,7 @@ const file_hoptrace_v1_device_proto_rawDesc = "" +
 	"\x13DeleteDeviceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"#\n" +
 	"\x11PollDeviceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"\xf7\x02\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\x8c\x04\n" +
 	"\tInterface\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
 	"\tdevice_id\x18\x02 \x01(\x03R\bdeviceId\x12\x19\n" +
@@ -1071,11 +1299,31 @@ const file_hoptrace_v1_device_proto_rawDesc = "" +
 	"\fagg_if_index\x18\f \x01(\x05R\n" +
 	"aggIfIndex\x12\x1b\n" +
 	"\tmac_count\x18\r \x01(\x05R\bmacCount\x12\x1a\n" +
-	"\bneighbor\x18\x0e \x01(\tR\bneighbor\"4\n" +
+	"\bneighbor\x18\x0e \x01(\tR\bneighbor\x12\x15\n" +
+	"\x06in_bps\x18\x0f \x01(\x03R\x05inBps\x12\x17\n" +
+	"\aout_bps\x18\x10 \x01(\x03R\x06outBps\x12'\n" +
+	"\x0futilization_pct\x18\x11 \x01(\x01R\x0eutilizationPct\x12\x1b\n" +
+	"\tin_errors\x18\x12 \x01(\x03R\binErrors\x12\x1d\n" +
+	"\n" +
+	"out_errors\x18\x13 \x01(\x03R\toutErrors\"4\n" +
 	"\x15ListInterfacesRequest\x12\x1b\n" +
 	"\tdevice_id\x18\x01 \x01(\x03R\bdeviceId\"C\n" +
 	"\x13ListInterfacesReply\x12,\n" +
-	"\x05items\x18\x01 \x03(\v2\x16.hoptrace.v1.InterfaceR\x05items2\xfb\x05\n" +
+	"\x05items\x18\x01 \x03(\v2\x16.hoptrace.v1.InterfaceR\x05items\"k\n" +
+	"\x1bListInterfaceMetricsRequest\x12\x1b\n" +
+	"\tdevice_id\x18\x01 \x01(\x03R\bdeviceId\x12\x19\n" +
+	"\bif_index\x18\x02 \x01(\x05R\aifIndex\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\xbb\x01\n" +
+	"\x14InterfaceMetricPoint\x12\x0e\n" +
+	"\x02at\x18\x01 \x01(\x03R\x02at\x12\x15\n" +
+	"\x06in_bps\x18\x02 \x01(\x03R\x05inBps\x12\x17\n" +
+	"\aout_bps\x18\x03 \x01(\x03R\x06outBps\x12'\n" +
+	"\x0futilization_pct\x18\x04 \x01(\x01R\x0eutilizationPct\x12\x1b\n" +
+	"\tin_errors\x18\x05 \x01(\x03R\binErrors\x12\x1d\n" +
+	"\n" +
+	"out_errors\x18\x06 \x01(\x03R\toutErrors\"T\n" +
+	"\x19ListInterfaceMetricsReply\x127\n" +
+	"\x05items\x18\x01 \x03(\v2!.hoptrace.v1.InterfaceMetricPointR\x05items2\xa9\a\n" +
 	"\rDeviceService\x12f\n" +
 	"\vListDevices\x12\x1f.hoptrace.v1.ListDevicesRequest\x1a\x1d.hoptrace.v1.ListDevicesReply\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/api/v1/devices\x12]\n" +
 	"\tGetDevice\x12\x1d.hoptrace.v1.GetDeviceRequest\x1a\x13.hoptrace.v1.Device\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/api/v1/devices/{id}\x12a\n" +
@@ -1084,7 +1332,8 @@ const file_hoptrace_v1_device_proto_rawDesc = "" +
 	"\fDeleteDevice\x12 .hoptrace.v1.DeleteDeviceRequest\x1a\x16.google.protobuf.Empty\"\x1c\x82\xd3\xe4\x93\x02\x16*\x14/api/v1/devices/{id}\x12g\n" +
 	"\n" +
 	"PollDevice\x12\x1e.hoptrace.v1.PollDeviceRequest\x1a\x13.hoptrace.v1.Device\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/devices/{id}/poll\x12\x86\x01\n" +
-	"\x0eListInterfaces\x12\".hoptrace.v1.ListInterfacesRequest\x1a .hoptrace.v1.ListInterfacesReply\".\x82\xd3\xe4\x93\x02(\x12&/api/v1/devices/{device_id}/interfacesB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
+	"\x0eListInterfaces\x12\".hoptrace.v1.ListInterfacesRequest\x1a .hoptrace.v1.ListInterfacesReply\".\x82\xd3\xe4\x93\x02(\x12&/api/v1/devices/{device_id}/interfaces\x12\xab\x01\n" +
+	"\x14ListInterfaceMetrics\x12(.hoptrace.v1.ListInterfaceMetricsRequest\x1a&.hoptrace.v1.ListInterfaceMetricsReply\"A\x82\xd3\xe4\x93\x02;\x129/api/v1/devices/{device_id}/interfaces/{if_index}/metricsB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
 
 var (
 	file_hoptrace_v1_device_proto_rawDescOnce sync.Once
@@ -1098,43 +1347,49 @@ func file_hoptrace_v1_device_proto_rawDescGZIP() []byte {
 	return file_hoptrace_v1_device_proto_rawDescData
 }
 
-var file_hoptrace_v1_device_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_hoptrace_v1_device_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_hoptrace_v1_device_proto_goTypes = []any{
-	(*Device)(nil),                // 0: hoptrace.v1.Device
-	(*ListDevicesRequest)(nil),    // 1: hoptrace.v1.ListDevicesRequest
-	(*ListDevicesReply)(nil),      // 2: hoptrace.v1.ListDevicesReply
-	(*GetDeviceRequest)(nil),      // 3: hoptrace.v1.GetDeviceRequest
-	(*CreateDeviceRequest)(nil),   // 4: hoptrace.v1.CreateDeviceRequest
-	(*UpdateDeviceRequest)(nil),   // 5: hoptrace.v1.UpdateDeviceRequest
-	(*DeleteDeviceRequest)(nil),   // 6: hoptrace.v1.DeleteDeviceRequest
-	(*PollDeviceRequest)(nil),     // 7: hoptrace.v1.PollDeviceRequest
-	(*Interface)(nil),             // 8: hoptrace.v1.Interface
-	(*ListInterfacesRequest)(nil), // 9: hoptrace.v1.ListInterfacesRequest
-	(*ListInterfacesReply)(nil),   // 10: hoptrace.v1.ListInterfacesReply
-	(*emptypb.Empty)(nil),         // 11: google.protobuf.Empty
+	(*Device)(nil),                      // 0: hoptrace.v1.Device
+	(*ListDevicesRequest)(nil),          // 1: hoptrace.v1.ListDevicesRequest
+	(*ListDevicesReply)(nil),            // 2: hoptrace.v1.ListDevicesReply
+	(*GetDeviceRequest)(nil),            // 3: hoptrace.v1.GetDeviceRequest
+	(*CreateDeviceRequest)(nil),         // 4: hoptrace.v1.CreateDeviceRequest
+	(*UpdateDeviceRequest)(nil),         // 5: hoptrace.v1.UpdateDeviceRequest
+	(*DeleteDeviceRequest)(nil),         // 6: hoptrace.v1.DeleteDeviceRequest
+	(*PollDeviceRequest)(nil),           // 7: hoptrace.v1.PollDeviceRequest
+	(*Interface)(nil),                   // 8: hoptrace.v1.Interface
+	(*ListInterfacesRequest)(nil),       // 9: hoptrace.v1.ListInterfacesRequest
+	(*ListInterfacesReply)(nil),         // 10: hoptrace.v1.ListInterfacesReply
+	(*ListInterfaceMetricsRequest)(nil), // 11: hoptrace.v1.ListInterfaceMetricsRequest
+	(*InterfaceMetricPoint)(nil),        // 12: hoptrace.v1.InterfaceMetricPoint
+	(*ListInterfaceMetricsReply)(nil),   // 13: hoptrace.v1.ListInterfaceMetricsReply
+	(*emptypb.Empty)(nil),               // 14: google.protobuf.Empty
 }
 var file_hoptrace_v1_device_proto_depIdxs = []int32{
 	0,  // 0: hoptrace.v1.ListDevicesReply.items:type_name -> hoptrace.v1.Device
 	8,  // 1: hoptrace.v1.ListInterfacesReply.items:type_name -> hoptrace.v1.Interface
-	1,  // 2: hoptrace.v1.DeviceService.ListDevices:input_type -> hoptrace.v1.ListDevicesRequest
-	3,  // 3: hoptrace.v1.DeviceService.GetDevice:input_type -> hoptrace.v1.GetDeviceRequest
-	4,  // 4: hoptrace.v1.DeviceService.CreateDevice:input_type -> hoptrace.v1.CreateDeviceRequest
-	5,  // 5: hoptrace.v1.DeviceService.UpdateDevice:input_type -> hoptrace.v1.UpdateDeviceRequest
-	6,  // 6: hoptrace.v1.DeviceService.DeleteDevice:input_type -> hoptrace.v1.DeleteDeviceRequest
-	7,  // 7: hoptrace.v1.DeviceService.PollDevice:input_type -> hoptrace.v1.PollDeviceRequest
-	9,  // 8: hoptrace.v1.DeviceService.ListInterfaces:input_type -> hoptrace.v1.ListInterfacesRequest
-	2,  // 9: hoptrace.v1.DeviceService.ListDevices:output_type -> hoptrace.v1.ListDevicesReply
-	0,  // 10: hoptrace.v1.DeviceService.GetDevice:output_type -> hoptrace.v1.Device
-	0,  // 11: hoptrace.v1.DeviceService.CreateDevice:output_type -> hoptrace.v1.Device
-	0,  // 12: hoptrace.v1.DeviceService.UpdateDevice:output_type -> hoptrace.v1.Device
-	11, // 13: hoptrace.v1.DeviceService.DeleteDevice:output_type -> google.protobuf.Empty
-	0,  // 14: hoptrace.v1.DeviceService.PollDevice:output_type -> hoptrace.v1.Device
-	10, // 15: hoptrace.v1.DeviceService.ListInterfaces:output_type -> hoptrace.v1.ListInterfacesReply
-	9,  // [9:16] is the sub-list for method output_type
-	2,  // [2:9] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	12, // 2: hoptrace.v1.ListInterfaceMetricsReply.items:type_name -> hoptrace.v1.InterfaceMetricPoint
+	1,  // 3: hoptrace.v1.DeviceService.ListDevices:input_type -> hoptrace.v1.ListDevicesRequest
+	3,  // 4: hoptrace.v1.DeviceService.GetDevice:input_type -> hoptrace.v1.GetDeviceRequest
+	4,  // 5: hoptrace.v1.DeviceService.CreateDevice:input_type -> hoptrace.v1.CreateDeviceRequest
+	5,  // 6: hoptrace.v1.DeviceService.UpdateDevice:input_type -> hoptrace.v1.UpdateDeviceRequest
+	6,  // 7: hoptrace.v1.DeviceService.DeleteDevice:input_type -> hoptrace.v1.DeleteDeviceRequest
+	7,  // 8: hoptrace.v1.DeviceService.PollDevice:input_type -> hoptrace.v1.PollDeviceRequest
+	9,  // 9: hoptrace.v1.DeviceService.ListInterfaces:input_type -> hoptrace.v1.ListInterfacesRequest
+	11, // 10: hoptrace.v1.DeviceService.ListInterfaceMetrics:input_type -> hoptrace.v1.ListInterfaceMetricsRequest
+	2,  // 11: hoptrace.v1.DeviceService.ListDevices:output_type -> hoptrace.v1.ListDevicesReply
+	0,  // 12: hoptrace.v1.DeviceService.GetDevice:output_type -> hoptrace.v1.Device
+	0,  // 13: hoptrace.v1.DeviceService.CreateDevice:output_type -> hoptrace.v1.Device
+	0,  // 14: hoptrace.v1.DeviceService.UpdateDevice:output_type -> hoptrace.v1.Device
+	14, // 15: hoptrace.v1.DeviceService.DeleteDevice:output_type -> google.protobuf.Empty
+	0,  // 16: hoptrace.v1.DeviceService.PollDevice:output_type -> hoptrace.v1.Device
+	10, // 17: hoptrace.v1.DeviceService.ListInterfaces:output_type -> hoptrace.v1.ListInterfacesReply
+	13, // 18: hoptrace.v1.DeviceService.ListInterfaceMetrics:output_type -> hoptrace.v1.ListInterfaceMetricsReply
+	11, // [11:19] is the sub-list for method output_type
+	3,  // [3:11] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_hoptrace_v1_device_proto_init() }
@@ -1148,7 +1403,7 @@ func file_hoptrace_v1_device_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hoptrace_v1_device_proto_rawDesc), len(file_hoptrace_v1_device_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

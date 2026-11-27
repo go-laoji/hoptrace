@@ -67,6 +67,10 @@ message Collector {
   string trap_addr = 11;
   // Trap 触发单设备增量重扫的防抖窗口(默认 15s)
   google.protobuf.Duration trap_debounce = 12;
+  // UDP Syslog 监听地址(如 0.0.0.0:1514); 为空关闭
+  string syslog_addr = 13;
+  // 设备配置自动备份周期(默认 86400s); 0 关闭自动备份
+  google.protobuf.Duration backup_interval = 14;
 }
 
 message Security {

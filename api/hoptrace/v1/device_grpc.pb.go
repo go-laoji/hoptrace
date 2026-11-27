@@ -20,13 +20,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DeviceService_ListDevices_FullMethodName    = "/hoptrace.v1.DeviceService/ListDevices"
-	DeviceService_GetDevice_FullMethodName      = "/hoptrace.v1.DeviceService/GetDevice"
-	DeviceService_CreateDevice_FullMethodName   = "/hoptrace.v1.DeviceService/CreateDevice"
-	DeviceService_UpdateDevice_FullMethodName   = "/hoptrace.v1.DeviceService/UpdateDevice"
-	DeviceService_DeleteDevice_FullMethodName   = "/hoptrace.v1.DeviceService/DeleteDevice"
-	DeviceService_PollDevice_FullMethodName     = "/hoptrace.v1.DeviceService/PollDevice"
-	DeviceService_ListInterfaces_FullMethodName = "/hoptrace.v1.DeviceService/ListInterfaces"
+	DeviceService_ListDevices_FullMethodName          = "/hoptrace.v1.DeviceService/ListDevices"
+	DeviceService_GetDevice_FullMethodName            = "/hoptrace.v1.DeviceService/GetDevice"
+	DeviceService_CreateDevice_FullMethodName         = "/hoptrace.v1.DeviceService/CreateDevice"
+	DeviceService_UpdateDevice_FullMethodName         = "/hoptrace.v1.DeviceService/UpdateDevice"
+	DeviceService_DeleteDevice_FullMethodName         = "/hoptrace.v1.DeviceService/DeleteDevice"
+	DeviceService_PollDevice_FullMethodName           = "/hoptrace.v1.DeviceService/PollDevice"
+	DeviceService_ListInterfaces_FullMethodName       = "/hoptrace.v1.DeviceService/ListInterfaces"
+	DeviceService_ListInterfaceMetrics_FullMethodName = "/hoptrace.v1.DeviceService/ListInterfaceMetrics"
 )
 
 // DeviceServiceClient is the client API for DeviceService service.
@@ -42,6 +43,7 @@ type DeviceServiceClient interface {
 	DeleteDevice(ctx context.Context, in *DeleteDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PollDevice(ctx context.Context, in *PollDeviceRequest, opts ...grpc.CallOption) (*Device, error)
 	ListInterfaces(ctx context.Context, in *ListInterfacesRequest, opts ...grpc.CallOption) (*ListInterfacesReply, error)
+	ListInterfaceMetrics(ctx context.Context, in *ListInterfaceMetricsRequest, opts ...grpc.CallOption) (*ListInterfaceMetricsReply, error)
 }
 
 type deviceServiceClient struct {
@@ -122,6 +124,16 @@ func (c *deviceServiceClient) ListInterfaces(ctx context.Context, in *ListInterf
 	return out, nil
 }
 
+func (c *deviceServiceClient) ListInterfaceMetrics(ctx context.Context, in *ListInterfaceMetricsRequest, opts ...grpc.CallOption) (*ListInterfaceMetricsReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInterfaceMetricsReply)
+	err := c.cc.Invoke(ctx, DeviceService_ListInterfaceMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DeviceServiceServer is the server API for DeviceService service.
 // All implementations must embed UnimplementedDeviceServiceServer
 // for forward compatibility.
@@ -135,6 +147,7 @@ type DeviceServiceServer interface {
 	DeleteDevice(context.Context, *DeleteDeviceRequest) (*emptypb.Empty, error)
 	PollDevice(context.Context, *PollDeviceRequest) (*Device, error)
 	ListInterfaces(context.Context, *ListInterfacesRequest) (*ListInterfacesReply, error)
+	ListInterfaceMetrics(context.Context, *ListInterfaceMetricsRequest) (*ListInterfaceMetricsReply, error)
 	mustEmbedUnimplementedDeviceServiceServer()
 }
 
@@ -165,6 +178,9 @@ func (UnimplementedDeviceServiceServer) PollDevice(context.Context, *PollDeviceR
 }
 func (UnimplementedDeviceServiceServer) ListInterfaces(context.Context, *ListInterfacesRequest) (*ListInterfacesReply, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInterfaces not implemented")
+}
+func (UnimplementedDeviceServiceServer) ListInterfaceMetrics(context.Context, *ListInterfaceMetricsRequest) (*ListInterfaceMetricsReply, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInterfaceMetrics not implemented")
 }
 func (UnimplementedDeviceServiceServer) mustEmbedUnimplementedDeviceServiceServer() {}
 func (UnimplementedDeviceServiceServer) testEmbeddedByValue()                       {}
@@ -313,6 +329,24 @@ func _DeviceService_ListInterfaces_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DeviceService_ListInterfaceMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInterfaceMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeviceServiceServer).ListInterfaceMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DeviceService_ListInterfaceMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeviceServiceServer).ListInterfaceMetrics(ctx, req.(*ListInterfaceMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DeviceService_ServiceDesc is the grpc.ServiceDesc for DeviceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -347,6 +381,10 @@ var DeviceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListInterfaces",
 			Handler:    _DeviceService_ListInterfaces_Handler,
+		},
+		{
+			MethodName: "ListInterfaceMetrics",
+			Handler:    _DeviceService_ListInterfaceMetrics_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

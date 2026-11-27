@@ -39,6 +39,9 @@ service DeviceService {
   rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesReply) {
     option (google.api.http) = {get: "/api/v1/devices/{device_id}/interfaces"};
   }
+  rpc ListInterfaceMetrics(ListInterfaceMetricsRequest) returns (ListInterfaceMetricsReply) {
+    option (google.api.http) = {get: "/api/v1/devices/{device_id}/interfaces/{if_index}/metrics"};
+  }
 }
 
 message Device {
@@ -128,10 +131,31 @@ message Interface {
   int32 agg_if_index = 12;
   int32 mac_count = 13;
   string neighbor = 14; // 对端描述
+  int64 in_bps = 15;
+  int64 out_bps = 16;
+  double utilization_pct = 17;
+  int64 in_errors = 18;
+  int64 out_errors = 19;
 }
 message ListInterfacesRequest {
   int64 device_id = 1;
 }
 message ListInterfacesReply {
   repeated Interface items = 1;
+}
+message ListInterfaceMetricsRequest {
+  int64 device_id = 1;
+  int32 if_index = 2;
+  int32 limit = 3;
+}
+message InterfaceMetricPoint {
+  int64 at = 1;
+  int64 in_bps = 2;
+  int64 out_bps = 3;
+  double utilization_pct = 4;
+  int64 in_errors = 5;
+  int64 out_errors = 6;
+}
+message ListInterfaceMetricsReply {
+  repeated InterfaceMetricPoint items = 1;
 }

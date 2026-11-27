@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package hoptrace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "hoptrace/api/hoptrace/v1;v1";
+
+// AlertService 实时告警中心、Webhook 通知渠道与 Syslog 日志查询
+service AlertService {
+  rpc ListAlerts(ListAlertsRequest) returns (ListAlertsReply) {
+    option (google.api.http) = {get: "/api/v1/alerts"};
+  }
+  rpc AckAlert(AckAlertRequest) returns (Alert) {
+    option (google.api.http) = {
+      post: "/api/v1/alerts/{id}/ack"
+      body: "*"
+    };
+  }
+  rpc ResolveAlert(ResolveAlertRequest) returns (Alert) {
+    option (google.api.http) = {
+      post: "/api/v1/alerts/{id}/resolve"
+      body: "*"
+    };
+  }
+  rpc ListChannels(google.protobuf.Empty) returns (ListChannelsReply) {
+    option (google.api.http) = {get: "/api/v1/alerts/channels"};
+  }
+  rpc SaveChannel(SaveChannelRequest) returns (AlertChannel) {
+    option (google.api.http) = {
+      post: "/api/v1/alerts/channels"
+      body: "*"
+    };
+  }
+  rpc DeleteChannel(DeleteChannelRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/alerts/channels/{id}"};
+  }
+  rpc TestChannel(TestChannelRequest) returns (TestChannelReply) {
+    option (google.api.http) = {
+      post: "/api/v1/alerts/channels/{id}/test"
+      body: "*"
+    };
+  }
+  rpc ListSyslogs(ListSyslogsRequest) returns (ListSyslogsReply) {
+    option (google.api.http) = {get: "/api/v1/syslogs"};
+  }
+}
+
+message Alert {
+  int64 id = 1;
+  // device_offline / link_down / new_endpoint / endpoint_moved / ip_conflict / suspect_hub / syslog_security
+  string kind = 2;
+  string severity = 3; // critical / warning / info
+  string title = 4;
+  string message = 5;
+  string target_key = 6;
+  int64 device_id = 7;
+  int64 endpoint_id = 8;
+  string status = 9; // open / acked / resolved
+  string acked_by = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+}
+
+message ListAlertsRequest {
+  string status = 1;
+  string severity = 2;
+  string kind = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message ListAlertsReply {
+  repeated Alert items = 1;
+  int64 total = 2;
+}
+
+message AckAlertRequest {
+  int64 id = 1;
+}
+
+message ResolveAlertRequest {
+  int64 id = 1;
+}
+
+message AlertChannel {
+  int64 id = 1;
+  string name = 2;
+  // wecom / dingtalk / feishu / webhook
+  string kind = 3;
+  string webhook_url = 4;
+  string secret = 5;
+  bool enabled = 6;
+  repeated string kinds = 7; // 订阅的告警类型，为空表示全部
+  int64 created_at = 8;
+}
+
+message SaveChannelRequest {
+  int64 id = 1;
+  string name = 2;
+  string kind = 3;
+  string webhook_url = 4;
+  string secret = 5;
+  bool enabled = 6;
+  repeated string kinds = 7;
+}
+
+message ListChannelsReply {
+  repeated AlertChannel items = 1;
+}
+
+message DeleteChannelRequest {
+  int64 id = 1;
+}
+
+message TestChannelRequest {
+  int64 id = 1;
+}
+
+message TestChannelReply {
+  bool ok = 1;
+  string detail = 2;
+}
+
+message SyslogEntry {
+  int64 id = 1;
+  string source_ip = 2;
+  int64 device_id = 3;
+  string device_name = 4;
+  int32 severity = 5; // 0-7
+  string facility = 6;
+  string tag = 7;
+  string message = 8;
+  int64 received_at = 9;
+}
+
+message ListSyslogsRequest {
+  string keyword = 1;
+  string source_ip = 2;
+  int32 max_severity = 3; // 0 表示不限制; 1-7 表示 <= severity
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message ListSyslogsReply {
+  repeated SyslogEntry items = 1;
+  int64 total = 2;
+}

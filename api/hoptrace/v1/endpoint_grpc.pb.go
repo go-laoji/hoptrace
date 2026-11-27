@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EndpointService_ListEndpoints_FullMethodName  = "/hoptrace.v1.EndpointService/ListEndpoints"
-	EndpointService_GetEndpoint_FullMethodName    = "/hoptrace.v1.EndpointService/GetEndpoint"
-	EndpointService_UpdateEndpoint_FullMethodName = "/hoptrace.v1.EndpointService/UpdateEndpoint"
-	EndpointService_DeleteEndpoint_FullMethodName = "/hoptrace.v1.EndpointService/DeleteEndpoint"
-	EndpointService_ListEvents_FullMethodName     = "/hoptrace.v1.EndpointService/ListEvents"
+	EndpointService_ListEndpoints_FullMethodName        = "/hoptrace.v1.EndpointService/ListEndpoints"
+	EndpointService_GetEndpoint_FullMethodName          = "/hoptrace.v1.EndpointService/GetEndpoint"
+	EndpointService_UpdateEndpoint_FullMethodName       = "/hoptrace.v1.EndpointService/UpdateEndpoint"
+	EndpointService_DeleteEndpoint_FullMethodName       = "/hoptrace.v1.EndpointService/DeleteEndpoint"
+	EndpointService_ListEvents_FullMethodName           = "/hoptrace.v1.EndpointService/ListEvents"
+	EndpointService_BatchImportEndpoints_FullMethodName = "/hoptrace.v1.EndpointService/BatchImportEndpoints"
 )
 
 // EndpointServiceClient is the client API for EndpointService service.
@@ -38,6 +39,7 @@ type EndpointServiceClient interface {
 	UpdateEndpoint(ctx context.Context, in *UpdateEndpointRequest, opts ...grpc.CallOption) (*Endpoint, error)
 	DeleteEndpoint(ctx context.Context, in *DeleteEndpointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsReply, error)
+	BatchImportEndpoints(ctx context.Context, in *BatchImportEndpointsRequest, opts ...grpc.CallOption) (*BatchImportEndpointsReply, error)
 }
 
 type endpointServiceClient struct {
@@ -98,6 +100,16 @@ func (c *endpointServiceClient) ListEvents(ctx context.Context, in *ListEventsRe
 	return out, nil
 }
 
+func (c *endpointServiceClient) BatchImportEndpoints(ctx context.Context, in *BatchImportEndpointsRequest, opts ...grpc.CallOption) (*BatchImportEndpointsReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchImportEndpointsReply)
+	err := c.cc.Invoke(ctx, EndpointService_BatchImportEndpoints_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EndpointServiceServer is the server API for EndpointService service.
 // All implementations must embed UnimplementedEndpointServiceServer
 // for forward compatibility.
@@ -109,6 +121,7 @@ type EndpointServiceServer interface {
 	UpdateEndpoint(context.Context, *UpdateEndpointRequest) (*Endpoint, error)
 	DeleteEndpoint(context.Context, *DeleteEndpointRequest) (*emptypb.Empty, error)
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsReply, error)
+	BatchImportEndpoints(context.Context, *BatchImportEndpointsRequest) (*BatchImportEndpointsReply, error)
 	mustEmbedUnimplementedEndpointServiceServer()
 }
 
@@ -133,6 +146,9 @@ func (UnimplementedEndpointServiceServer) DeleteEndpoint(context.Context, *Delet
 }
 func (UnimplementedEndpointServiceServer) ListEvents(context.Context, *ListEventsRequest) (*ListEventsReply, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEvents not implemented")
+}
+func (UnimplementedEndpointServiceServer) BatchImportEndpoints(context.Context, *BatchImportEndpointsRequest) (*BatchImportEndpointsReply, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchImportEndpoints not implemented")
 }
 func (UnimplementedEndpointServiceServer) mustEmbedUnimplementedEndpointServiceServer() {}
 func (UnimplementedEndpointServiceServer) testEmbeddedByValue()                         {}
@@ -245,6 +261,24 @@ func _EndpointService_ListEvents_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EndpointService_BatchImportEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchImportEndpointsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EndpointServiceServer).BatchImportEndpoints(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EndpointService_BatchImportEndpoints_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EndpointServiceServer).BatchImportEndpoints(ctx, req.(*BatchImportEndpointsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EndpointService_ServiceDesc is the grpc.ServiceDesc for EndpointService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -271,6 +305,10 @@ var EndpointService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEvents",
 			Handler:    _EndpointService_ListEvents_Handler,
+		},
+		{
+			MethodName: "BatchImportEndpoints",
+			Handler:    _EndpointService_BatchImportEndpoints_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

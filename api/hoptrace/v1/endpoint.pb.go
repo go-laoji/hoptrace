@@ -45,6 +45,10 @@ type Endpoint struct {
 	FirstSeen     int64                  `protobuf:"varint,18,opt,name=first_seen,json=firstSeen,proto3" json:"first_seen,omitempty"`
 	LastSeen      int64                  `protobuf:"varint,19,opt,name=last_seen,json=lastSeen,proto3" json:"last_seen,omitempty"`
 	Remark        string                 `protobuf:"bytes,20,opt,name=remark,proto3" json:"remark,omitempty"`
+	AccessType    string                 `protobuf:"bytes,21,opt,name=access_type,json=accessType,proto3" json:"access_type,omitempty"` // wired / wireless
+	Ssid          string                 `protobuf:"bytes,22,opt,name=ssid,proto3" json:"ssid,omitempty"`
+	ApName        string                 `protobuf:"bytes,23,opt,name=ap_name,json=apName,proto3" json:"ap_name,omitempty"`
+	Rssi          int32                  `protobuf:"varint,24,opt,name=rssi,proto3" json:"rssi,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -217,6 +221,34 @@ func (x *Endpoint) GetRemark() string {
 		return x.Remark
 	}
 	return ""
+}
+
+func (x *Endpoint) GetAccessType() string {
+	if x != nil {
+		return x.AccessType
+	}
+	return ""
+}
+
+func (x *Endpoint) GetSsid() string {
+	if x != nil {
+		return x.Ssid
+	}
+	return ""
+}
+
+func (x *Endpoint) GetApName() string {
+	if x != nil {
+		return x.ApName
+	}
+	return ""
+}
+
+func (x *Endpoint) GetRssi() int32 {
+	if x != nil {
+		return x.Rssi
+	}
+	return 0
 }
 
 type EndpointLocation struct {
@@ -488,6 +520,7 @@ type ListEndpointsRequest struct {
 	DeviceId      int64                  `protobuf:"varint,5,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	Page          int32                  `protobuf:"varint,6,opt,name=page,proto3" json:"page,omitempty"`
 	PageSize      int32                  `protobuf:"varint,7,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	AccessType    string                 `protobuf:"bytes,8,opt,name=access_type,json=accessType,proto3" json:"access_type,omitempty"` // wired / wireless
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -571,6 +604,209 @@ func (x *ListEndpointsRequest) GetPageSize() int32 {
 	return 0
 }
 
+func (x *ListEndpointsRequest) GetAccessType() string {
+	if x != nil {
+		return x.AccessType
+	}
+	return ""
+}
+
+type EndpointImportRow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mac           string                 `protobuf:"bytes,1,opt,name=mac,proto3" json:"mac,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Owner         string                 `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
+	Tags          []string               `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty"`
+	Trust         string                 `protobuf:"bytes,5,opt,name=trust,proto3" json:"trust,omitempty"`
+	Type          string                 `protobuf:"bytes,6,opt,name=type,proto3" json:"type,omitempty"`
+	Remark        string                 `protobuf:"bytes,7,opt,name=remark,proto3" json:"remark,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EndpointImportRow) Reset() {
+	*x = EndpointImportRow{}
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EndpointImportRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EndpointImportRow) ProtoMessage() {}
+
+func (x *EndpointImportRow) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EndpointImportRow.ProtoReflect.Descriptor instead.
+func (*EndpointImportRow) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *EndpointImportRow) GetMac() string {
+	if x != nil {
+		return x.Mac
+	}
+	return ""
+}
+
+func (x *EndpointImportRow) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *EndpointImportRow) GetOwner() string {
+	if x != nil {
+		return x.Owner
+	}
+	return ""
+}
+
+func (x *EndpointImportRow) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *EndpointImportRow) GetTrust() string {
+	if x != nil {
+		return x.Trust
+	}
+	return ""
+}
+
+func (x *EndpointImportRow) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *EndpointImportRow) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
+type BatchImportEndpointsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*EndpointImportRow   `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchImportEndpointsRequest) Reset() {
+	*x = BatchImportEndpointsRequest{}
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchImportEndpointsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchImportEndpointsRequest) ProtoMessage() {}
+
+func (x *BatchImportEndpointsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchImportEndpointsRequest.ProtoReflect.Descriptor instead.
+func (*BatchImportEndpointsRequest) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *BatchImportEndpointsRequest) GetItems() []*EndpointImportRow {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type BatchImportEndpointsReply struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Updated       int32                  `protobuf:"varint,1,opt,name=updated,proto3" json:"updated,omitempty"`
+	Skipped       int32                  `protobuf:"varint,2,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	Errors        []string               `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchImportEndpointsReply) Reset() {
+	*x = BatchImportEndpointsReply{}
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchImportEndpointsReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchImportEndpointsReply) ProtoMessage() {}
+
+func (x *BatchImportEndpointsReply) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchImportEndpointsReply.ProtoReflect.Descriptor instead.
+func (*BatchImportEndpointsReply) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *BatchImportEndpointsReply) GetUpdated() int32 {
+	if x != nil {
+		return x.Updated
+	}
+	return 0
+}
+
+func (x *BatchImportEndpointsReply) GetSkipped() int32 {
+	if x != nil {
+		return x.Skipped
+	}
+	return 0
+}
+
+func (x *BatchImportEndpointsReply) GetErrors() []string {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
 type ListEndpointsReply struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*Endpoint            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -581,7 +817,7 @@ type ListEndpointsReply struct {
 
 func (x *ListEndpointsReply) Reset() {
 	*x = ListEndpointsReply{}
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[5]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -593,7 +829,7 @@ func (x *ListEndpointsReply) String() string {
 func (*ListEndpointsReply) ProtoMessage() {}
 
 func (x *ListEndpointsReply) ProtoReflect() protoreflect.Message {
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[5]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -606,7 +842,7 @@ func (x *ListEndpointsReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEndpointsReply.ProtoReflect.Descriptor instead.
 func (*ListEndpointsReply) Descriptor() ([]byte, []int) {
-	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{5}
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListEndpointsReply) GetItems() []*Endpoint {
@@ -632,7 +868,7 @@ type GetEndpointRequest struct {
 
 func (x *GetEndpointRequest) Reset() {
 	*x = GetEndpointRequest{}
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[6]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -644,7 +880,7 @@ func (x *GetEndpointRequest) String() string {
 func (*GetEndpointRequest) ProtoMessage() {}
 
 func (x *GetEndpointRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[6]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -657,7 +893,7 @@ func (x *GetEndpointRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEndpointRequest.ProtoReflect.Descriptor instead.
 func (*GetEndpointRequest) Descriptor() ([]byte, []int) {
-	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{6}
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetEndpointRequest) GetId() int64 {
@@ -682,7 +918,7 @@ type UpdateEndpointRequest struct {
 
 func (x *UpdateEndpointRequest) Reset() {
 	*x = UpdateEndpointRequest{}
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[7]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -694,7 +930,7 @@ func (x *UpdateEndpointRequest) String() string {
 func (*UpdateEndpointRequest) ProtoMessage() {}
 
 func (x *UpdateEndpointRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[7]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -707,7 +943,7 @@ func (x *UpdateEndpointRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEndpointRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEndpointRequest) Descriptor() ([]byte, []int) {
-	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{7}
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateEndpointRequest) GetId() int64 {
@@ -768,7 +1004,7 @@ type DeleteEndpointRequest struct {
 
 func (x *DeleteEndpointRequest) Reset() {
 	*x = DeleteEndpointRequest{}
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[8]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -780,7 +1016,7 @@ func (x *DeleteEndpointRequest) String() string {
 func (*DeleteEndpointRequest) ProtoMessage() {}
 
 func (x *DeleteEndpointRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[8]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -793,7 +1029,7 @@ func (x *DeleteEndpointRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEndpointRequest.ProtoReflect.Descriptor instead.
 func (*DeleteEndpointRequest) Descriptor() ([]byte, []int) {
-	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{8}
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteEndpointRequest) GetId() int64 {
@@ -815,7 +1051,7 @@ type ListEventsRequest struct {
 
 func (x *ListEventsRequest) Reset() {
 	*x = ListEventsRequest{}
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[9]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -827,7 +1063,7 @@ func (x *ListEventsRequest) String() string {
 func (*ListEventsRequest) ProtoMessage() {}
 
 func (x *ListEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[9]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -840,7 +1076,7 @@ func (x *ListEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListEventsRequest) Descriptor() ([]byte, []int) {
-	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{9}
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListEventsRequest) GetEndpointId() int64 {
@@ -881,7 +1117,7 @@ type ListEventsReply struct {
 
 func (x *ListEventsReply) Reset() {
 	*x = ListEventsReply{}
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[10]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -893,7 +1129,7 @@ func (x *ListEventsReply) String() string {
 func (*ListEventsReply) ProtoMessage() {}
 
 func (x *ListEventsReply) ProtoReflect() protoreflect.Message {
-	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[10]
+	mi := &file_hoptrace_v1_endpoint_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -906,7 +1142,7 @@ func (x *ListEventsReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventsReply.ProtoReflect.Descriptor instead.
 func (*ListEventsReply) Descriptor() ([]byte, []int) {
-	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{10}
+	return file_hoptrace_v1_endpoint_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListEventsReply) GetItems() []*EndpointEvent {
@@ -927,7 +1163,7 @@ var File_hoptrace_v1_endpoint_proto protoreflect.FileDescriptor
 
 const file_hoptrace_v1_endpoint_proto_rawDesc = "" +
 	"\n" +
-	"\x1ahoptrace/v1/endpoint.proto\x12\vhoptrace.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xe1\x03\n" +
+	"\x1ahoptrace/v1/endpoint.proto\x12\vhoptrace.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xc3\x04\n" +
 	"\bEndpoint\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
 	"\x03mac\x18\x02 \x01(\tR\x03mac\x12\x0e\n" +
@@ -952,7 +1188,12 @@ const file_hoptrace_v1_endpoint_proto_rawDesc = "" +
 	"\n" +
 	"first_seen\x18\x12 \x01(\x03R\tfirstSeen\x12\x1b\n" +
 	"\tlast_seen\x18\x13 \x01(\x03R\blastSeen\x12\x16\n" +
-	"\x06remark\x18\x14 \x01(\tR\x06remark\"\xd4\x01\n" +
+	"\x06remark\x18\x14 \x01(\tR\x06remark\x12\x1f\n" +
+	"\vaccess_type\x18\x15 \x01(\tR\n" +
+	"accessType\x12\x12\n" +
+	"\x04ssid\x18\x16 \x01(\tR\x04ssid\x12\x17\n" +
+	"\aap_name\x18\x17 \x01(\tR\x06apName\x12\x12\n" +
+	"\x04rssi\x18\x18 \x01(\x05R\x04rssi\"\xd4\x01\n" +
 	"\x10EndpointLocation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
 	"\tdevice_id\x18\x02 \x01(\x03R\bdeviceId\x12\x1f\n" +
@@ -976,7 +1217,7 @@ const file_hoptrace_v1_endpoint_proto_rawDesc = "" +
 	"\x0eEndpointDetail\x121\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x15.hoptrace.v1.EndpointR\bendpoint\x12;\n" +
 	"\tlocations\x18\x02 \x03(\v2\x1d.hoptrace.v1.EndpointLocationR\tlocations\x122\n" +
-	"\x06events\x18\x03 \x03(\v2\x1a.hoptrace.v1.EndpointEventR\x06events\"\xc0\x01\n" +
+	"\x06events\x18\x03 \x03(\v2\x1a.hoptrace.v1.EndpointEventR\x06events\"\xe1\x01\n" +
 	"\x14ListEndpointsRequest\x12\x18\n" +
 	"\akeyword\x18\x01 \x01(\tR\akeyword\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x14\n" +
@@ -984,7 +1225,23 @@ const file_hoptrace_v1_endpoint_proto_rawDesc = "" +
 	"\x04type\x18\x04 \x01(\tR\x04type\x12\x1b\n" +
 	"\tdevice_id\x18\x05 \x01(\x03R\bdeviceId\x12\x12\n" +
 	"\x04page\x18\x06 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\a \x01(\x05R\bpageSize\"W\n" +
+	"\tpage_size\x18\a \x01(\x05R\bpageSize\x12\x1f\n" +
+	"\vaccess_type\x18\b \x01(\tR\n" +
+	"accessType\"\xa5\x01\n" +
+	"\x11EndpointImportRow\x12\x10\n" +
+	"\x03mac\x18\x01 \x01(\tR\x03mac\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05owner\x18\x03 \x01(\tR\x05owner\x12\x12\n" +
+	"\x04tags\x18\x04 \x03(\tR\x04tags\x12\x14\n" +
+	"\x05trust\x18\x05 \x01(\tR\x05trust\x12\x12\n" +
+	"\x04type\x18\x06 \x01(\tR\x04type\x12\x16\n" +
+	"\x06remark\x18\a \x01(\tR\x06remark\"S\n" +
+	"\x1bBatchImportEndpointsRequest\x124\n" +
+	"\x05items\x18\x01 \x03(\v2\x1e.hoptrace.v1.EndpointImportRowR\x05items\"g\n" +
+	"\x19BatchImportEndpointsReply\x12\x18\n" +
+	"\aupdated\x18\x01 \x01(\x05R\aupdated\x12\x18\n" +
+	"\askipped\x18\x02 \x01(\x05R\askipped\x12\x16\n" +
+	"\x06errors\x18\x03 \x03(\tR\x06errors\"W\n" +
 	"\x12ListEndpointsReply\x12+\n" +
 	"\x05items\x18\x01 \x03(\v2\x15.hoptrace.v1.EndpointR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\"$\n" +
@@ -1008,14 +1265,15 @@ const file_hoptrace_v1_endpoint_proto_rawDesc = "" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\"Y\n" +
 	"\x0fListEventsReply\x120\n" +
 	"\x05items\x18\x01 \x03(\v2\x1a.hoptrace.v1.EndpointEventR\x05items\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x03R\x05total2\xb0\x04\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total2\xc0\x05\n" +
 	"\x0fEndpointService\x12n\n" +
 	"\rListEndpoints\x12!.hoptrace.v1.ListEndpointsRequest\x1a\x1f.hoptrace.v1.ListEndpointsReply\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/endpoints\x12k\n" +
 	"\vGetEndpoint\x12\x1f.hoptrace.v1.GetEndpointRequest\x1a\x1b.hoptrace.v1.EndpointDetail\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/endpoints/{id}\x12n\n" +
 	"\x0eUpdateEndpoint\x12\".hoptrace.v1.UpdateEndpointRequest\x1a\x15.hoptrace.v1.Endpoint\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\x1a\x16/api/v1/endpoints/{id}\x12l\n" +
 	"\x0eDeleteEndpoint\x12\".hoptrace.v1.DeleteEndpointRequest\x1a\x16.google.protobuf.Empty\"\x1e\x82\xd3\xe4\x93\x02\x18*\x16/api/v1/endpoints/{id}\x12b\n" +
 	"\n" +
-	"ListEvents\x12\x1e.hoptrace.v1.ListEventsRequest\x1a\x1c.hoptrace.v1.ListEventsReply\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/eventsB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
+	"ListEvents\x12\x1e.hoptrace.v1.ListEventsRequest\x1a\x1c.hoptrace.v1.ListEventsReply\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/events\x12\x8d\x01\n" +
+	"\x14BatchImportEndpoints\x12(.hoptrace.v1.BatchImportEndpointsRequest\x1a&.hoptrace.v1.BatchImportEndpointsReply\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/endpoints/importB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
 
 var (
 	file_hoptrace_v1_endpoint_proto_rawDescOnce sync.Once
@@ -1029,42 +1287,48 @@ func file_hoptrace_v1_endpoint_proto_rawDescGZIP() []byte {
 	return file_hoptrace_v1_endpoint_proto_rawDescData
 }
 
-var file_hoptrace_v1_endpoint_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_hoptrace_v1_endpoint_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_hoptrace_v1_endpoint_proto_goTypes = []any{
-	(*Endpoint)(nil),              // 0: hoptrace.v1.Endpoint
-	(*EndpointLocation)(nil),      // 1: hoptrace.v1.EndpointLocation
-	(*EndpointEvent)(nil),         // 2: hoptrace.v1.EndpointEvent
-	(*EndpointDetail)(nil),        // 3: hoptrace.v1.EndpointDetail
-	(*ListEndpointsRequest)(nil),  // 4: hoptrace.v1.ListEndpointsRequest
-	(*ListEndpointsReply)(nil),    // 5: hoptrace.v1.ListEndpointsReply
-	(*GetEndpointRequest)(nil),    // 6: hoptrace.v1.GetEndpointRequest
-	(*UpdateEndpointRequest)(nil), // 7: hoptrace.v1.UpdateEndpointRequest
-	(*DeleteEndpointRequest)(nil), // 8: hoptrace.v1.DeleteEndpointRequest
-	(*ListEventsRequest)(nil),     // 9: hoptrace.v1.ListEventsRequest
-	(*ListEventsReply)(nil),       // 10: hoptrace.v1.ListEventsReply
-	(*emptypb.Empty)(nil),         // 11: google.protobuf.Empty
+	(*Endpoint)(nil),                    // 0: hoptrace.v1.Endpoint
+	(*EndpointLocation)(nil),            // 1: hoptrace.v1.EndpointLocation
+	(*EndpointEvent)(nil),               // 2: hoptrace.v1.EndpointEvent
+	(*EndpointDetail)(nil),              // 3: hoptrace.v1.EndpointDetail
+	(*ListEndpointsRequest)(nil),        // 4: hoptrace.v1.ListEndpointsRequest
+	(*EndpointImportRow)(nil),           // 5: hoptrace.v1.EndpointImportRow
+	(*BatchImportEndpointsRequest)(nil), // 6: hoptrace.v1.BatchImportEndpointsRequest
+	(*BatchImportEndpointsReply)(nil),   // 7: hoptrace.v1.BatchImportEndpointsReply
+	(*ListEndpointsReply)(nil),          // 8: hoptrace.v1.ListEndpointsReply
+	(*GetEndpointRequest)(nil),          // 9: hoptrace.v1.GetEndpointRequest
+	(*UpdateEndpointRequest)(nil),       // 10: hoptrace.v1.UpdateEndpointRequest
+	(*DeleteEndpointRequest)(nil),       // 11: hoptrace.v1.DeleteEndpointRequest
+	(*ListEventsRequest)(nil),           // 12: hoptrace.v1.ListEventsRequest
+	(*ListEventsReply)(nil),             // 13: hoptrace.v1.ListEventsReply
+	(*emptypb.Empty)(nil),               // 14: google.protobuf.Empty
 }
 var file_hoptrace_v1_endpoint_proto_depIdxs = []int32{
 	0,  // 0: hoptrace.v1.EndpointDetail.endpoint:type_name -> hoptrace.v1.Endpoint
 	1,  // 1: hoptrace.v1.EndpointDetail.locations:type_name -> hoptrace.v1.EndpointLocation
 	2,  // 2: hoptrace.v1.EndpointDetail.events:type_name -> hoptrace.v1.EndpointEvent
-	0,  // 3: hoptrace.v1.ListEndpointsReply.items:type_name -> hoptrace.v1.Endpoint
-	2,  // 4: hoptrace.v1.ListEventsReply.items:type_name -> hoptrace.v1.EndpointEvent
-	4,  // 5: hoptrace.v1.EndpointService.ListEndpoints:input_type -> hoptrace.v1.ListEndpointsRequest
-	6,  // 6: hoptrace.v1.EndpointService.GetEndpoint:input_type -> hoptrace.v1.GetEndpointRequest
-	7,  // 7: hoptrace.v1.EndpointService.UpdateEndpoint:input_type -> hoptrace.v1.UpdateEndpointRequest
-	8,  // 8: hoptrace.v1.EndpointService.DeleteEndpoint:input_type -> hoptrace.v1.DeleteEndpointRequest
-	9,  // 9: hoptrace.v1.EndpointService.ListEvents:input_type -> hoptrace.v1.ListEventsRequest
-	5,  // 10: hoptrace.v1.EndpointService.ListEndpoints:output_type -> hoptrace.v1.ListEndpointsReply
-	3,  // 11: hoptrace.v1.EndpointService.GetEndpoint:output_type -> hoptrace.v1.EndpointDetail
-	0,  // 12: hoptrace.v1.EndpointService.UpdateEndpoint:output_type -> hoptrace.v1.Endpoint
-	11, // 13: hoptrace.v1.EndpointService.DeleteEndpoint:output_type -> google.protobuf.Empty
-	10, // 14: hoptrace.v1.EndpointService.ListEvents:output_type -> hoptrace.v1.ListEventsReply
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	5,  // 3: hoptrace.v1.BatchImportEndpointsRequest.items:type_name -> hoptrace.v1.EndpointImportRow
+	0,  // 4: hoptrace.v1.ListEndpointsReply.items:type_name -> hoptrace.v1.Endpoint
+	2,  // 5: hoptrace.v1.ListEventsReply.items:type_name -> hoptrace.v1.EndpointEvent
+	4,  // 6: hoptrace.v1.EndpointService.ListEndpoints:input_type -> hoptrace.v1.ListEndpointsRequest
+	9,  // 7: hoptrace.v1.EndpointService.GetEndpoint:input_type -> hoptrace.v1.GetEndpointRequest
+	10, // 8: hoptrace.v1.EndpointService.UpdateEndpoint:input_type -> hoptrace.v1.UpdateEndpointRequest
+	11, // 9: hoptrace.v1.EndpointService.DeleteEndpoint:input_type -> hoptrace.v1.DeleteEndpointRequest
+	12, // 10: hoptrace.v1.EndpointService.ListEvents:input_type -> hoptrace.v1.ListEventsRequest
+	6,  // 11: hoptrace.v1.EndpointService.BatchImportEndpoints:input_type -> hoptrace.v1.BatchImportEndpointsRequest
+	8,  // 12: hoptrace.v1.EndpointService.ListEndpoints:output_type -> hoptrace.v1.ListEndpointsReply
+	3,  // 13: hoptrace.v1.EndpointService.GetEndpoint:output_type -> hoptrace.v1.EndpointDetail
+	0,  // 14: hoptrace.v1.EndpointService.UpdateEndpoint:output_type -> hoptrace.v1.Endpoint
+	14, // 15: hoptrace.v1.EndpointService.DeleteEndpoint:output_type -> google.protobuf.Empty
+	13, // 16: hoptrace.v1.EndpointService.ListEvents:output_type -> hoptrace.v1.ListEventsReply
+	7,  // 17: hoptrace.v1.EndpointService.BatchImportEndpoints:output_type -> hoptrace.v1.BatchImportEndpointsReply
+	12, // [12:18] is the sub-list for method output_type
+	6,  // [6:12] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_hoptrace_v1_endpoint_proto_init() }
@@ -1078,7 +1342,7 @@ func file_hoptrace_v1_endpoint_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hoptrace_v1_endpoint_proto_rawDesc), len(file_hoptrace_v1_endpoint_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

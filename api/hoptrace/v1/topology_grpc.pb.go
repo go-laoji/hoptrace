@@ -22,6 +22,9 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	TopologyService_GetTopology_FullMethodName = "/hoptrace.v1.TopologyService/GetTopology"
 	TopologyService_Rebuild_FullMethodName     = "/hoptrace.v1.TopologyService/Rebuild"
+	TopologyService_TracePath_FullMethodName   = "/hoptrace.v1.TopologyService/TracePath"
+	TopologyService_SaveLayout_FullMethodName  = "/hoptrace.v1.TopologyService/SaveLayout"
+	TopologyService_ResetLayout_FullMethodName = "/hoptrace.v1.TopologyService/ResetLayout"
 )
 
 // TopologyServiceClient is the client API for TopologyService service.
@@ -33,6 +36,12 @@ type TopologyServiceClient interface {
 	GetTopology(ctx context.Context, in *GetTopologyRequest, opts ...grpc.CallOption) (*Topology, error)
 	// 手动触发拓扑重建与终端同步
 	Rebuild(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)
+	TracePath(ctx context.Context, in *TracePathRequest, opts ...grpc.CallOption) (*TracePathReply, error)
+	// 保存手工微调后的节点坐标
+	SaveLayout(ctx context.Context, in *SaveLayoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 重置所有节点自定义坐标
+	ResetLayout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type topologyServiceClient struct {
@@ -63,6 +72,36 @@ func (c *topologyServiceClient) Rebuild(ctx context.Context, in *emptypb.Empty, 
 	return out, nil
 }
 
+func (c *topologyServiceClient) TracePath(ctx context.Context, in *TracePathRequest, opts ...grpc.CallOption) (*TracePathReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TracePathReply)
+	err := c.cc.Invoke(ctx, TopologyService_TracePath_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *topologyServiceClient) SaveLayout(ctx context.Context, in *SaveLayoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, TopologyService_SaveLayout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *topologyServiceClient) ResetLayout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, TopologyService_ResetLayout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TopologyServiceServer is the server API for TopologyService service.
 // All implementations must embed UnimplementedTopologyServiceServer
 // for forward compatibility.
@@ -72,6 +111,12 @@ type TopologyServiceServer interface {
 	GetTopology(context.Context, *GetTopologyRequest) (*Topology, error)
 	// 手动触发拓扑重建与终端同步
 	Rebuild(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// 路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)
+	TracePath(context.Context, *TracePathRequest) (*TracePathReply, error)
+	// 保存手工微调后的节点坐标
+	SaveLayout(context.Context, *SaveLayoutRequest) (*emptypb.Empty, error)
+	// 重置所有节点自定义坐标
+	ResetLayout(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedTopologyServiceServer()
 }
 
@@ -87,6 +132,15 @@ func (UnimplementedTopologyServiceServer) GetTopology(context.Context, *GetTopol
 }
 func (UnimplementedTopologyServiceServer) Rebuild(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Rebuild not implemented")
+}
+func (UnimplementedTopologyServiceServer) TracePath(context.Context, *TracePathRequest) (*TracePathReply, error) {
+	return nil, status.Error(codes.Unimplemented, "method TracePath not implemented")
+}
+func (UnimplementedTopologyServiceServer) SaveLayout(context.Context, *SaveLayoutRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveLayout not implemented")
+}
+func (UnimplementedTopologyServiceServer) ResetLayout(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetLayout not implemented")
 }
 func (UnimplementedTopologyServiceServer) mustEmbedUnimplementedTopologyServiceServer() {}
 func (UnimplementedTopologyServiceServer) testEmbeddedByValue()                         {}
@@ -145,6 +199,60 @@ func _TopologyService_Rebuild_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TopologyService_TracePath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TracePathRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TopologyServiceServer).TracePath(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TopologyService_TracePath_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TopologyServiceServer).TracePath(ctx, req.(*TracePathRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TopologyService_SaveLayout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveLayoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TopologyServiceServer).SaveLayout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TopologyService_SaveLayout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TopologyServiceServer).SaveLayout(ctx, req.(*SaveLayoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TopologyService_ResetLayout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TopologyServiceServer).ResetLayout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TopologyService_ResetLayout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TopologyServiceServer).ResetLayout(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TopologyService_ServiceDesc is the grpc.ServiceDesc for TopologyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -159,6 +267,18 @@ var TopologyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Rebuild",
 			Handler:    _TopologyService_Rebuild_Handler,
+		},
+		{
+			MethodName: "TracePath",
+			Handler:    _TopologyService_TracePath_Handler,
+		},
+		{
+			MethodName: "SaveLayout",
+			Handler:    _TopologyService_SaveLayout_Handler,
+		},
+		{
+			MethodName: "ResetLayout",
+			Handler:    _TopologyService_ResetLayout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -27,6 +27,12 @@ service EndpointService {
   rpc ListEvents(ListEventsRequest) returns (ListEventsReply) {
     option (google.api.http) = {get: "/api/v1/events"};
   }
+  rpc BatchImportEndpoints(BatchImportEndpointsRequest) returns (BatchImportEndpointsReply) {
+    option (google.api.http) = {
+      post: "/api/v1/endpoints/import"
+      body: "*"
+    };
+  }
 }
 
 message Endpoint {
@@ -50,6 +56,10 @@ message Endpoint {
   int64 first_seen = 18;
   int64 last_seen = 19;
   string remark = 20;
+  string access_type = 21; // wired / wireless
+  string ssid = 22;
+  string ap_name = 23;
+  int32 rssi = 24;
 }
 
 message EndpointLocation {
@@ -88,6 +98,24 @@ message ListEndpointsRequest {
   int64 device_id = 5;
   int32 page = 6;
   int32 page_size = 7;
+  string access_type = 8; // wired / wireless
+}
+message EndpointImportRow {
+  string mac = 1;
+  string name = 2;
+  string owner = 3;
+  repeated string tags = 4;
+  string trust = 5;
+  string type = 6;
+  string remark = 7;
+}
+message BatchImportEndpointsRequest {
+  repeated EndpointImportRow items = 1;
+}
+message BatchImportEndpointsReply {
+  int32 updated = 1;
+  int32 skipped = 2;
+  repeated string errors = 3;
 }
 message ListEndpointsReply {
   repeated Endpoint items = 1;

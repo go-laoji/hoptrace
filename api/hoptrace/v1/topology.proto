@@ -19,6 +19,23 @@ service TopologyService {
       body: "*"
     };
   }
+  // 路径追踪: 源(IP/MAC/设备) -> 目标(IP/MAC/设备，留空则追踪到核心/网关)
+  rpc TracePath(TracePathRequest) returns (TracePathReply) {
+    option (google.api.http) = {get: "/api/v1/topology/trace"};
+  }
+  // 保存手工微调后的节点坐标
+  rpc SaveLayout(SaveLayoutRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/topology/layout"
+      body: "*"
+    };
+  }
+  // 重置所有节点自定义坐标
+  rpc ResetLayout(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/topology/layout"
+    };
+  }
 }
 
 message GetTopologyRequest {
@@ -43,6 +60,9 @@ message TopoNode {
   string type = 11; // 终端类型
   bool managed = 12;
   int32 endpoint_count = 13;
+  double pos_x = 14;
+  double pos_y = 15;
+  bool has_pos = 16;
 }
 
 message TopoLink {
@@ -51,13 +71,50 @@ message TopoLink {
   string target = 3;
   string source_port = 4;
   string target_port = 5;
-  string kind = 6; // lldp / access
+  string kind = 6; // lldp / fdb / access
   double confidence = 7;
   string status = 8; // up / down / stale
   repeated string members = 9;
+  int64 in_bps = 10;
+  int64 out_bps = 11;
+  double utilization_pct = 12;
 }
 
 message Topology {
   repeated TopoNode nodes = 1;
   repeated TopoLink links = 2;
+}
+
+message TracePathRequest {
+  string source = 1; // IP / MAC / 设备名
+  string target = 2; // 可选，为空则自动追踪到防火墙或核心交换机
+}
+
+message PathHop {
+  string node_id = 1;
+  string kind = 2; // endpoint / device
+  string name = 3;
+  string ip = 4;
+  string role = 5;
+  string in_port = 6;
+  string out_port = 7;
+  string link_id = 8;
+}
+
+message TracePathReply {
+  bool found = 1;
+  string message = 2;
+  repeated PathHop hops = 3;
+  repeated string node_ids = 4;
+  repeated string link_ids = 5;
+}
+
+message NodePosition {
+  int64 device_id = 1;
+  double x = 2;
+  double y = 3;
+}
+
+message SaveLayoutRequest {
+  repeated NodePosition positions = 1;
 }

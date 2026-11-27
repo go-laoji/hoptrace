@@ -22,6 +22,7 @@ const OperationDeviceServiceCreateDevice = "/hoptrace.v1.DeviceService/CreateDev
 const OperationDeviceServiceDeleteDevice = "/hoptrace.v1.DeviceService/DeleteDevice"
 const OperationDeviceServiceGetDevice = "/hoptrace.v1.DeviceService/GetDevice"
 const OperationDeviceServiceListDevices = "/hoptrace.v1.DeviceService/ListDevices"
+const OperationDeviceServiceListInterfaceMetrics = "/hoptrace.v1.DeviceService/ListInterfaceMetrics"
 const OperationDeviceServiceListInterfaces = "/hoptrace.v1.DeviceService/ListInterfaces"
 const OperationDeviceServicePollDevice = "/hoptrace.v1.DeviceService/PollDevice"
 const OperationDeviceServiceUpdateDevice = "/hoptrace.v1.DeviceService/UpdateDevice"
@@ -31,6 +32,7 @@ type DeviceServiceHTTPServer interface {
 	DeleteDevice(context.Context, *DeleteDeviceRequest) (*emptypb.Empty, error)
 	GetDevice(context.Context, *GetDeviceRequest) (*Device, error)
 	ListDevices(context.Context, *ListDevicesRequest) (*ListDevicesReply, error)
+	ListInterfaceMetrics(context.Context, *ListInterfaceMetricsRequest) (*ListInterfaceMetricsReply, error)
 	ListInterfaces(context.Context, *ListInterfacesRequest) (*ListInterfacesReply, error)
 	PollDevice(context.Context, *PollDeviceRequest) (*Device, error)
 	UpdateDevice(context.Context, *UpdateDeviceRequest) (*Device, error)
@@ -45,6 +47,7 @@ func RegisterDeviceServiceHTTPServer(s *http.Server, srv DeviceServiceHTTPServer
 	r.Handle("DELETE", "/api/v1/devices/{id}", _DeviceService_DeleteDevice0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/devices/{id}/poll", _DeviceService_PollDevice0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/devices/{device_id}/interfaces", _DeviceService_ListInterfaces0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/devices/{device_id}/interfaces/{if_index}/metrics", _DeviceService_ListInterfaceMetrics0_HTTP_Handler(srv))
 }
 
 func _DeviceService_ListDevices0_HTTP_Handler(srv DeviceServiceHTTPServer) func(ctx http.Context) error {
@@ -195,11 +198,34 @@ func _DeviceService_ListInterfaces0_HTTP_Handler(srv DeviceServiceHTTPServer) fu
 	}
 }
 
+func _DeviceService_ListInterfaceMetrics0_HTTP_Handler(srv DeviceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListInterfaceMetricsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationDeviceServiceListInterfaceMetrics)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListInterfaceMetrics(ctx, req.(*ListInterfaceMetricsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListInterfaceMetricsReply)
+		return ctx.Result(200, reply)
+	}
+}
+
 type DeviceServiceHTTPClient interface {
 	CreateDevice(ctx context.Context, req *CreateDeviceRequest, opts ...http.CallOption) (rsp *Device, err error)
 	DeleteDevice(ctx context.Context, req *DeleteDeviceRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 	GetDevice(ctx context.Context, req *GetDeviceRequest, opts ...http.CallOption) (rsp *Device, err error)
 	ListDevices(ctx context.Context, req *ListDevicesRequest, opts ...http.CallOption) (rsp *ListDevicesReply, err error)
+	ListInterfaceMetrics(ctx context.Context, req *ListInterfaceMetricsRequest, opts ...http.CallOption) (rsp *ListInterfaceMetricsReply, err error)
 	ListInterfaces(ctx context.Context, req *ListInterfacesRequest, opts ...http.CallOption) (rsp *ListInterfacesReply, err error)
 	PollDevice(ctx context.Context, req *PollDeviceRequest, opts ...http.CallOption) (rsp *Device, err error)
 	UpdateDevice(ctx context.Context, req *UpdateDeviceRequest, opts ...http.CallOption) (rsp *Device, err error)
@@ -269,6 +295,22 @@ func (c *DeviceServiceHTTPClientImpl) ListDevices(ctx context.Context, in *ListD
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationDeviceServiceListDevices),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *DeviceServiceHTTPClientImpl) ListInterfaceMetrics(ctx context.Context, in *ListInterfaceMetricsRequest, opts ...http.CallOption) (*ListInterfaceMetricsReply, error) {
+	var out ListInterfaceMetricsReply
+	pattern := "/api/v1/devices/{device_id}/interfaces/{if_index}/metrics"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationDeviceServiceListInterfaceMetrics),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

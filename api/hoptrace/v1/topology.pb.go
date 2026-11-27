@@ -100,6 +100,9 @@ type TopoNode struct {
 	Type          string                 `protobuf:"bytes,11,opt,name=type,proto3" json:"type,omitempty"` // 终端类型
 	Managed       bool                   `protobuf:"varint,12,opt,name=managed,proto3" json:"managed,omitempty"`
 	EndpointCount int32                  `protobuf:"varint,13,opt,name=endpoint_count,json=endpointCount,proto3" json:"endpoint_count,omitempty"`
+	PosX          float64                `protobuf:"fixed64,14,opt,name=pos_x,json=posX,proto3" json:"pos_x,omitempty"`
+	PosY          float64                `protobuf:"fixed64,15,opt,name=pos_y,json=posY,proto3" json:"pos_y,omitempty"`
+	HasPos        bool                   `protobuf:"varint,16,opt,name=has_pos,json=hasPos,proto3" json:"has_pos,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -225,19 +228,43 @@ func (x *TopoNode) GetEndpointCount() int32 {
 	return 0
 }
 
+func (x *TopoNode) GetPosX() float64 {
+	if x != nil {
+		return x.PosX
+	}
+	return 0
+}
+
+func (x *TopoNode) GetPosY() float64 {
+	if x != nil {
+		return x.PosY
+	}
+	return 0
+}
+
+func (x *TopoNode) GetHasPos() bool {
+	if x != nil {
+		return x.HasPos
+	}
+	return false
+}
+
 type TopoLink struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Source        string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Target        string                 `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
-	SourcePort    string                 `protobuf:"bytes,4,opt,name=source_port,json=sourcePort,proto3" json:"source_port,omitempty"`
-	TargetPort    string                 `protobuf:"bytes,5,opt,name=target_port,json=targetPort,proto3" json:"target_port,omitempty"`
-	Kind          string                 `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"` // lldp / access
-	Confidence    float64                `protobuf:"fixed64,7,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"` // up / down / stale
-	Members       []string               `protobuf:"bytes,9,rep,name=members,proto3" json:"members,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Source         string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Target         string                 `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	SourcePort     string                 `protobuf:"bytes,4,opt,name=source_port,json=sourcePort,proto3" json:"source_port,omitempty"`
+	TargetPort     string                 `protobuf:"bytes,5,opt,name=target_port,json=targetPort,proto3" json:"target_port,omitempty"`
+	Kind           string                 `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"` // lldp / fdb / access
+	Confidence     float64                `protobuf:"fixed64,7,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	Status         string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"` // up / down / stale
+	Members        []string               `protobuf:"bytes,9,rep,name=members,proto3" json:"members,omitempty"`
+	InBps          int64                  `protobuf:"varint,10,opt,name=in_bps,json=inBps,proto3" json:"in_bps,omitempty"`
+	OutBps         int64                  `protobuf:"varint,11,opt,name=out_bps,json=outBps,proto3" json:"out_bps,omitempty"`
+	UtilizationPct float64                `protobuf:"fixed64,12,opt,name=utilization_pct,json=utilizationPct,proto3" json:"utilization_pct,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *TopoLink) Reset() {
@@ -333,6 +360,27 @@ func (x *TopoLink) GetMembers() []string {
 	return nil
 }
 
+func (x *TopoLink) GetInBps() int64 {
+	if x != nil {
+		return x.InBps
+	}
+	return 0
+}
+
+func (x *TopoLink) GetOutBps() int64 {
+	if x != nil {
+		return x.OutBps
+	}
+	return 0
+}
+
+func (x *TopoLink) GetUtilizationPct() float64 {
+	if x != nil {
+		return x.UtilizationPct
+	}
+	return 0
+}
+
 type Topology struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Nodes         []*TopoNode            `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
@@ -385,6 +433,338 @@ func (x *Topology) GetLinks() []*TopoLink {
 	return nil
 }
 
+type TracePathRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"` // IP / MAC / 设备名
+	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"` // 可选，为空则自动追踪到防火墙或核心交换机
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TracePathRequest) Reset() {
+	*x = TracePathRequest{}
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TracePathRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TracePathRequest) ProtoMessage() {}
+
+func (x *TracePathRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TracePathRequest.ProtoReflect.Descriptor instead.
+func (*TracePathRequest) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_topology_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TracePathRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *TracePathRequest) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+type PathHop struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"` // endpoint / device
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Ip            string                 `protobuf:"bytes,4,opt,name=ip,proto3" json:"ip,omitempty"`
+	Role          string                 `protobuf:"bytes,5,opt,name=role,proto3" json:"role,omitempty"`
+	InPort        string                 `protobuf:"bytes,6,opt,name=in_port,json=inPort,proto3" json:"in_port,omitempty"`
+	OutPort       string                 `protobuf:"bytes,7,opt,name=out_port,json=outPort,proto3" json:"out_port,omitempty"`
+	LinkId        string                 `protobuf:"bytes,8,opt,name=link_id,json=linkId,proto3" json:"link_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PathHop) Reset() {
+	*x = PathHop{}
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PathHop) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PathHop) ProtoMessage() {}
+
+func (x *PathHop) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PathHop.ProtoReflect.Descriptor instead.
+func (*PathHop) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_topology_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PathHop) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *PathHop) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *PathHop) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PathHop) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+func (x *PathHop) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *PathHop) GetInPort() string {
+	if x != nil {
+		return x.InPort
+	}
+	return ""
+}
+
+func (x *PathHop) GetOutPort() string {
+	if x != nil {
+		return x.OutPort
+	}
+	return ""
+}
+
+func (x *PathHop) GetLinkId() string {
+	if x != nil {
+		return x.LinkId
+	}
+	return ""
+}
+
+type TracePathReply struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Found         bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Hops          []*PathHop             `protobuf:"bytes,3,rep,name=hops,proto3" json:"hops,omitempty"`
+	NodeIds       []string               `protobuf:"bytes,4,rep,name=node_ids,json=nodeIds,proto3" json:"node_ids,omitempty"`
+	LinkIds       []string               `protobuf:"bytes,5,rep,name=link_ids,json=linkIds,proto3" json:"link_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TracePathReply) Reset() {
+	*x = TracePathReply{}
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TracePathReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TracePathReply) ProtoMessage() {}
+
+func (x *TracePathReply) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TracePathReply.ProtoReflect.Descriptor instead.
+func (*TracePathReply) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_topology_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *TracePathReply) GetFound() bool {
+	if x != nil {
+		return x.Found
+	}
+	return false
+}
+
+func (x *TracePathReply) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *TracePathReply) GetHops() []*PathHop {
+	if x != nil {
+		return x.Hops
+	}
+	return nil
+}
+
+func (x *TracePathReply) GetNodeIds() []string {
+	if x != nil {
+		return x.NodeIds
+	}
+	return nil
+}
+
+func (x *TracePathReply) GetLinkIds() []string {
+	if x != nil {
+		return x.LinkIds
+	}
+	return nil
+}
+
+type NodePosition struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeviceId      int64                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	X             float64                `protobuf:"fixed64,2,opt,name=x,proto3" json:"x,omitempty"`
+	Y             float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodePosition) Reset() {
+	*x = NodePosition{}
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodePosition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodePosition) ProtoMessage() {}
+
+func (x *NodePosition) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodePosition.ProtoReflect.Descriptor instead.
+func (*NodePosition) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_topology_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *NodePosition) GetDeviceId() int64 {
+	if x != nil {
+		return x.DeviceId
+	}
+	return 0
+}
+
+func (x *NodePosition) GetX() float64 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *NodePosition) GetY() float64 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+type SaveLayoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Positions     []*NodePosition        `protobuf:"bytes,1,rep,name=positions,proto3" json:"positions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveLayoutRequest) Reset() {
+	*x = SaveLayoutRequest{}
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveLayoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveLayoutRequest) ProtoMessage() {}
+
+func (x *SaveLayoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hoptrace_v1_topology_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveLayoutRequest.ProtoReflect.Descriptor instead.
+func (*SaveLayoutRequest) Descriptor() ([]byte, []int) {
+	return file_hoptrace_v1_topology_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SaveLayoutRequest) GetPositions() []*NodePosition {
+	if x != nil {
+		return x.Positions
+	}
+	return nil
+}
+
 var File_hoptrace_v1_topology_proto protoreflect.FileDescriptor
 
 const file_hoptrace_v1_topology_proto_rawDesc = "" +
@@ -393,7 +773,7 @@ const file_hoptrace_v1_topology_proto_rawDesc = "" +
 	"\x12GetTopologyRequest\x12*\n" +
 	"\x11expand_device_ids\x18\x01 \x03(\x03R\x0fexpandDeviceIds\x122\n" +
 	"\x15include_all_endpoints\x18\x02 \x01(\bR\x13includeAllEndpoints\x12\x12\n" +
-	"\x04site\x18\x03 \x01(\tR\x04site\"\xb0\x02\n" +
+	"\x04site\x18\x03 \x01(\tR\x04site\"\xf3\x02\n" +
 	"\bTopoNode\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x15\n" +
@@ -408,7 +788,10 @@ const file_hoptrace_v1_topology_proto_rawDesc = "" +
 	" \x01(\tR\x05model\x12\x12\n" +
 	"\x04type\x18\v \x01(\tR\x04type\x12\x18\n" +
 	"\amanaged\x18\f \x01(\bR\amanaged\x12%\n" +
-	"\x0eendpoint_count\x18\r \x01(\x05R\rendpointCount\"\xf2\x01\n" +
+	"\x0eendpoint_count\x18\r \x01(\x05R\rendpointCount\x12\x13\n" +
+	"\x05pos_x\x18\x0e \x01(\x01R\x04posX\x12\x13\n" +
+	"\x05pos_y\x18\x0f \x01(\x01R\x04posY\x12\x17\n" +
+	"\ahas_pos\x18\x10 \x01(\bR\x06hasPos\"\xcb\x02\n" +
 	"\bTopoLink\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x16\n" +
@@ -422,13 +805,45 @@ const file_hoptrace_v1_topology_proto_rawDesc = "" +
 	"confidence\x18\a \x01(\x01R\n" +
 	"confidence\x12\x16\n" +
 	"\x06status\x18\b \x01(\tR\x06status\x12\x18\n" +
-	"\amembers\x18\t \x03(\tR\amembers\"d\n" +
+	"\amembers\x18\t \x03(\tR\amembers\x12\x15\n" +
+	"\x06in_bps\x18\n" +
+	" \x01(\x03R\x05inBps\x12\x17\n" +
+	"\aout_bps\x18\v \x01(\x03R\x06outBps\x12'\n" +
+	"\x0futilization_pct\x18\f \x01(\x01R\x0eutilizationPct\"d\n" +
 	"\bTopology\x12+\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x15.hoptrace.v1.TopoNodeR\x05nodes\x12+\n" +
-	"\x05links\x18\x02 \x03(\v2\x15.hoptrace.v1.TopoLinkR\x05links2\xd2\x01\n" +
+	"\x05links\x18\x02 \x03(\v2\x15.hoptrace.v1.TopoLinkR\x05links\"B\n" +
+	"\x10TracePathRequest\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12\x16\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\"\xbb\x01\n" +
+	"\aPathHop\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x0e\n" +
+	"\x02ip\x18\x04 \x01(\tR\x02ip\x12\x12\n" +
+	"\x04role\x18\x05 \x01(\tR\x04role\x12\x17\n" +
+	"\ain_port\x18\x06 \x01(\tR\x06inPort\x12\x19\n" +
+	"\bout_port\x18\a \x01(\tR\aoutPort\x12\x17\n" +
+	"\alink_id\x18\b \x01(\tR\x06linkId\"\xa0\x01\n" +
+	"\x0eTracePathReply\x12\x14\n" +
+	"\x05found\x18\x01 \x01(\bR\x05found\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12(\n" +
+	"\x04hops\x18\x03 \x03(\v2\x14.hoptrace.v1.PathHopR\x04hops\x12\x19\n" +
+	"\bnode_ids\x18\x04 \x03(\tR\anodeIds\x12\x19\n" +
+	"\blink_ids\x18\x05 \x03(\tR\alinkIds\"G\n" +
+	"\fNodePosition\x12\x1b\n" +
+	"\tdevice_id\x18\x01 \x01(\x03R\bdeviceId\x12\f\n" +
+	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
+	"\x01y\x18\x03 \x01(\x01R\x01y\"L\n" +
+	"\x11SaveLayoutRequest\x127\n" +
+	"\tpositions\x18\x01 \x03(\v2\x19.hoptrace.v1.NodePositionR\tpositions2\x85\x04\n" +
 	"\x0fTopologyService\x12_\n" +
 	"\vGetTopology\x12\x1f.hoptrace.v1.GetTopologyRequest\x1a\x15.hoptrace.v1.Topology\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/v1/topology\x12^\n" +
-	"\aRebuild\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/topology/rebuildB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
+	"\aRebuild\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/topology/rebuild\x12g\n" +
+	"\tTracePath\x12\x1d.hoptrace.v1.TracePathRequest\x1a\x1b.hoptrace.v1.TracePathReply\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/topology/trace\x12h\n" +
+	"\n" +
+	"SaveLayout\x12\x1e.hoptrace.v1.SaveLayoutRequest\x1a\x16.google.protobuf.Empty\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/topology/layout\x12^\n" +
+	"\vResetLayout\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x1f\x82\xd3\xe4\x93\x02\x19*\x17/api/v1/topology/layoutB\x1dZ\x1bhoptrace/api/hoptrace/v1;v1b\x06proto3"
 
 var (
 	file_hoptrace_v1_topology_proto_rawDescOnce sync.Once
@@ -442,26 +857,39 @@ func file_hoptrace_v1_topology_proto_rawDescGZIP() []byte {
 	return file_hoptrace_v1_topology_proto_rawDescData
 }
 
-var file_hoptrace_v1_topology_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_hoptrace_v1_topology_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_hoptrace_v1_topology_proto_goTypes = []any{
 	(*GetTopologyRequest)(nil), // 0: hoptrace.v1.GetTopologyRequest
 	(*TopoNode)(nil),           // 1: hoptrace.v1.TopoNode
 	(*TopoLink)(nil),           // 2: hoptrace.v1.TopoLink
 	(*Topology)(nil),           // 3: hoptrace.v1.Topology
-	(*emptypb.Empty)(nil),      // 4: google.protobuf.Empty
+	(*TracePathRequest)(nil),   // 4: hoptrace.v1.TracePathRequest
+	(*PathHop)(nil),            // 5: hoptrace.v1.PathHop
+	(*TracePathReply)(nil),     // 6: hoptrace.v1.TracePathReply
+	(*NodePosition)(nil),       // 7: hoptrace.v1.NodePosition
+	(*SaveLayoutRequest)(nil),  // 8: hoptrace.v1.SaveLayoutRequest
+	(*emptypb.Empty)(nil),      // 9: google.protobuf.Empty
 }
 var file_hoptrace_v1_topology_proto_depIdxs = []int32{
 	1, // 0: hoptrace.v1.Topology.nodes:type_name -> hoptrace.v1.TopoNode
 	2, // 1: hoptrace.v1.Topology.links:type_name -> hoptrace.v1.TopoLink
-	0, // 2: hoptrace.v1.TopologyService.GetTopology:input_type -> hoptrace.v1.GetTopologyRequest
-	4, // 3: hoptrace.v1.TopologyService.Rebuild:input_type -> google.protobuf.Empty
-	3, // 4: hoptrace.v1.TopologyService.GetTopology:output_type -> hoptrace.v1.Topology
-	4, // 5: hoptrace.v1.TopologyService.Rebuild:output_type -> google.protobuf.Empty
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	5, // 2: hoptrace.v1.TracePathReply.hops:type_name -> hoptrace.v1.PathHop
+	7, // 3: hoptrace.v1.SaveLayoutRequest.positions:type_name -> hoptrace.v1.NodePosition
+	0, // 4: hoptrace.v1.TopologyService.GetTopology:input_type -> hoptrace.v1.GetTopologyRequest
+	9, // 5: hoptrace.v1.TopologyService.Rebuild:input_type -> google.protobuf.Empty
+	4, // 6: hoptrace.v1.TopologyService.TracePath:input_type -> hoptrace.v1.TracePathRequest
+	8, // 7: hoptrace.v1.TopologyService.SaveLayout:input_type -> hoptrace.v1.SaveLayoutRequest
+	9, // 8: hoptrace.v1.TopologyService.ResetLayout:input_type -> google.protobuf.Empty
+	3, // 9: hoptrace.v1.TopologyService.GetTopology:output_type -> hoptrace.v1.Topology
+	9, // 10: hoptrace.v1.TopologyService.Rebuild:output_type -> google.protobuf.Empty
+	6, // 11: hoptrace.v1.TopologyService.TracePath:output_type -> hoptrace.v1.TracePathReply
+	9, // 12: hoptrace.v1.TopologyService.SaveLayout:output_type -> google.protobuf.Empty
+	9, // 13: hoptrace.v1.TopologyService.ResetLayout:output_type -> google.protobuf.Empty
+	9, // [9:14] is the sub-list for method output_type
+	4, // [4:9] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_hoptrace_v1_topology_proto_init() }
@@ -475,7 +903,7 @@ func file_hoptrace_v1_topology_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hoptrace_v1_topology_proto_rawDesc), len(file_hoptrace_v1_topology_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
