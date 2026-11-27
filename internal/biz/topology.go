@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"hoptrace/internal/pkg/oui"
 )
 
 // lldpRemSysCapEnabled 首字节位定义(IEEE 802.1AB)
@@ -29,19 +31,39 @@ const (
 	NeighborUnknown
 )
 
-// ClassifyNeighbor 依据 LLDP 系统能力位判定邻居类别。
+// ClassifyNeighbor 依据 LLDP 系统能力位、描述与 OUI 厂商判定邻居类别。
+// 注意: Windows 10/11 默认 LLDP 驱动及部分开启桥接/虚拟化的 PC 会发送无 sysName/sysDescr
+// 的 LLDP 报文(甚至携带 capBridge 或 RemMgmtIP), 需识别为终端而非未知网络设备。
 func ClassifyNeighbor(n *Neighbor) NeighborClass {
 	c := n.RemCaps
+	hasSysInfo := strings.TrimSpace(n.RemSysName) != "" || strings.TrimSpace(n.RemSysDescr) != ""
+
 	switch {
 	case c&capWLAN != 0:
 		return NeighborAP
 	case c&capPhone != 0:
 		return NeighborPhone
+	}
+
+	// 若既无系统名称也无系统描述, 且 OUI 明显属于 PC/消费终端/网卡厂商(如 Realtek/Gigabyte/ASUS/Lenovo/LCFC/Dell/Intel 等),
+	// 即使其 LLDP 报文带了 bridge 能力位(如开启了 Hyper-V/Docker 虚拟网桥)或管理 IP, 也应归类为终端。
+	if !hasSysInfo {
+		vendor := oui.Lookup(n.RemChassisID)
+		if t := InferEndpointType(vendor, ""); t != TypeUnknown && t != TypeAP {
+			return NeighborStation
+		}
+		// 无 sysName、无 sysDescr 且无管理 IP 的裸 MAC 邻居, 默认视为终端(如 Windows 10/11 LLDP 驱动)
+		if n.RemMgmtIP == "" && c&capRouter == 0 {
+			return NeighborStation
+		}
+	}
+
+	switch {
 	case c&(capBridge|capRouter|capRepeater) != 0:
 		return NeighborNetwork
 	case c&capStation != 0:
 		return NeighborStation
-	case c == 0 && n.RemMgmtIP != "":
+	case c == 0 && n.RemMgmtIP != "" && hasSysInfo:
 		return NeighborNetwork
 	}
 	return NeighborUnknown
@@ -240,10 +262,11 @@ func BuildTopology(in TopoInput) *TopoResult {
 		}
 		neighborDesc[IfKey{n.DeviceID, n.LocalIfIndex}] = desc
 
-		if ClassifyNeighbor(n) != NeighborNetwork {
-			continue // AP/电话/终端:交给终端引擎
-		}
 		rem := resolve(n)
+		// 已纳管设备始终作为网络邻居处理; 未纳管邻居则按 ClassifyNeighbor 过滤掉 PC/AP/电话等终端
+		if (rem == nil || !rem.Managed) && ClassifyNeighbor(n) != NeighborNetwork {
+			continue // AP/电话/PC 终端:交给终端引擎
+		}
 		if rem == nil {
 			chassis := NormalizeMAC(n.RemChassisID)
 			key := chassis
@@ -363,6 +386,7 @@ func BuildTopology(in TopoInput) *TopoResult {
 	}
 
 	// 生成链路
+	linkedDev := map[uint]bool{}
 	keys := make([]string, 0, len(accs))
 	for k := range accs {
 		keys = append(keys, k)
@@ -371,6 +395,8 @@ func BuildTopology(in TopoInput) *TopoResult {
 	for _, k := range keys {
 		acc := accs[k]
 		l := acc.link
+		linkedDev[l.ADeviceID] = true
+		linkedDev[l.BDeviceID] = true
 		switch {
 		case acc.reportedA && acc.reportedB:
 			l.Confidence = 1.0
@@ -395,6 +421,14 @@ func BuildTopology(in TopoInput) *TopoResult {
 		res.Stubs = append(res.Stubs, s)
 	}
 	sort.Slice(res.Stubs, func(i, j int) bool { return res.Stubs[i].Name < res.Stubs[j].Name })
+
+	// 清理不再有任何活跃链路连接的孤立未纳管占位设备(例如 PC LLDP 过滤后遗留的旧占位节点)
+	for _, d := range devs {
+		if !d.Managed && !obsolete[d.ID] && !linkedDev[d.ID] {
+			res.ObsoleteStubs = append(res.ObsoleteStubs, d.ID)
+			obsolete[d.ID] = true
+		}
+	}
 
 	// FDB 链路推断(AFT): 当两台已纳管设备之间无 LLDP 链路时, 若 A:pA 学到 B 的 MAC 且 B:pB 学到 A 的 MAC,
 	// 且两侧端口看到的设备集合交集为空(中间无其他交换机), 则推断 A:pA <-> B:pB 直连(confidence=0.5)。

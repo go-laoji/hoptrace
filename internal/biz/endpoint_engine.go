@@ -67,7 +67,7 @@ func InferEndpointType(vendor, name string) string {
 		return TypeIoT
 	case has("supermicro", "inspur", "vmware", "xensource", "qemu", "proxmox"):
 		return TypeServer
-	case has("dell", "hewlett", "hp inc", "lenovo", "asustek", "acer", "intel", "realtek", "microsoft", "giga-byte", "micro-star", "huawei device", "huawei technologies", "ibm"):
+	case has("dell", "hewlett", "hp inc", "lenovo", "lcfc", "compal", "quanta", "wistron", "hon hai", "foxconn", "pegatron", "asustek", "acer", "intel", "realtek", "microsoft", "giga-byte", "micro-star", "huawei device", "huawei technologies", "ibm"):
 		return TypePC
 	}
 	return TypeUnknown

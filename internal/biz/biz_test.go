@@ -183,3 +183,24 @@ func TestBuildTopologyFDBInference(t *testing.T) {
 		t.Errorf("inferred FDB ports must be marked uplink: %+v", res.IfInfos)
 	}
 }
+
+func TestClassifyPCLLDPAsStation(t *testing.T) {
+	// Windows/PC 网卡(Gigabyte/ASUS/Realtek/Lenovo)发送的无 sysName/sysDescr LLDP 报文(即使带 capBridge)
+	// 不应被识别为网络设备占位节点
+	pcMACs := []string{
+		"40:8d:5c:3e:56:e4", // Gigabyte
+		"10:7b:44:7e:24:c6", // ASUSTek
+		"00:e0:4c:c0:f3:d5", // Realtek
+		"68:f7:28:c4:fc:bd", // LCFC / Lenovo
+	}
+	for _, mac := range pcMACs {
+		cls := ClassifyNeighbor(&Neighbor{RemChassisID: mac, RemCaps: capBridge})
+		if cls != NeighborStation {
+			t.Errorf("PC MAC %s without sysName/sysDescr should be NeighborStation, got %d", mac, cls)
+		}
+	}
+	// 真正的交换机(带 sysName)仍应识别为 NeighborNetwork
+	if cls := ClassifyNeighbor(&Neighbor{RemChassisID: "68:8f:84:01:af:db", RemSysName: "140.151", RemCaps: capBridge}); cls != NeighborNetwork {
+		t.Errorf("Huawei switch should be NeighborNetwork, got %d", cls)
+	}
+}
