@@ -35,6 +35,12 @@ export default [
     component: './hoptrace/Discovery',
   },
   {
+    path: '/control',
+    name: '管控与审批',
+    icon: 'SafetyCertificateOutlined',
+    component: './hoptrace/Control',
+  },
+  {
     path: '/users',
     name: '用户与权限',
     icon: 'TeamOutlined',

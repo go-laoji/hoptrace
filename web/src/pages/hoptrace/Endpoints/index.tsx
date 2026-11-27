@@ -11,6 +11,7 @@ import {
 import { Badge, Descriptions, Drawer, message, Popconfirm, Space, Table, Tabs, Tag, Timeline } from 'antd';
 import React, { useRef, useState } from 'react';
 import {
+  createControlAction,
   deleteEndpoint,
   type Endpoint,
   type EndpointDetail,
@@ -93,7 +94,7 @@ const EndpointsPage: React.FC = () => {
     {
       title: '操作',
       valueType: 'option',
-      width: 135,
+      width: 175,
       render: (_, r) => [
         <a key="detail" onClick={() => openDetail(r.id)}>
           轨迹
@@ -101,6 +102,21 @@ const EndpointsPage: React.FC = () => {
         <a key="edit" onClick={() => setEditing(r)}>
           编辑
         </a>,
+        <Popconfirm
+          key="block"
+          title={`为终端 ${r.mac} 发起黑洞 MAC 封禁审批单？`}
+          onConfirm={async () => {
+            await createControlAction({
+              action: 'block_endpoint',
+              endpointId: r.id,
+              protocol: 'ssh',
+              reason: `从终端台账发起封禁 (${r.ip || r.mac})`,
+            });
+            message.success('已提交封禁审批单，请前往「端口管控与审批」执行');
+          }}
+        >
+          <a style={{ color: '#fa8c16' }}>封禁</a>
+        </Popconfirm>,
         <Popconfirm
           key="del"
           title="确认删除该终端记录？"

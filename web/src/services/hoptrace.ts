@@ -363,3 +363,91 @@ export const createUser = (data: {
 
 export const deleteUser = (id: string) =>
   request(`/api/v1/users/${id}`, { method: 'DELETE' });
+
+// ---------- M2 端口管控、审批与写凭据 ----------
+
+export interface ControlAction {
+  id: string;
+  action: string;
+  deviceId: string;
+  deviceName: string;
+  ifIndex: number;
+  ifName: string;
+  endpointId: string;
+  endpointMac: string;
+  paramValue: string;
+  prevValue: string;
+  protocol: string;
+  dryRunPreview: string;
+  rollbackPreview: string;
+  status: string;
+  reason: string;
+  requestedBy: string;
+  approvedBy: string;
+  resultLog: string;
+  createdAt: string;
+  executedAt: string;
+  rolledBackAt: string;
+}
+
+export interface WriteCredential {
+  id: string;
+  name: string;
+  protocol: string;
+  username: string;
+  port: number;
+  hasPassword: boolean;
+  nacWebhookUrl: string;
+  createdAt: string;
+}
+
+export const listControlActions = (params: {
+  status?: string;
+  deviceId?: string;
+  page?: number;
+  pageSize?: number;
+}) => request<{ items: ControlAction[]; total: string }>('/api/v1/control/actions', { params });
+
+export const createControlAction = (data: {
+  action: string;
+  deviceId?: string;
+  ifIndex?: number;
+  endpointId?: string;
+  paramValue?: string;
+  protocol?: string;
+  reason?: string;
+  dryRunOnly?: boolean;
+}) => request<ControlAction>('/api/v1/control/actions', { method: 'POST', data });
+
+export const approveControlAction = (id: string, autoExecute = true) =>
+  request<ControlAction>(`/api/v1/control/actions/${id}/approve`, {
+    method: 'POST',
+    data: { autoExecute },
+  });
+
+export const rejectControlAction = (id: string, reason = '') =>
+  request<ControlAction>(`/api/v1/control/actions/${id}/reject`, {
+    method: 'POST',
+    data: { reason },
+  });
+
+export const executeControlAction = (id: string) =>
+  request<ControlAction>(`/api/v1/control/actions/${id}/execute`, {
+    method: 'POST',
+    data: {},
+  });
+
+export const rollbackControlAction = (id: string) =>
+  request<ControlAction>(`/api/v1/control/actions/${id}/rollback`, {
+    method: 'POST',
+    data: {},
+  });
+
+export const listWriteCredentials = () =>
+  request<{ items: WriteCredential[] }>('/api/v1/control/credentials');
+
+export const saveWriteCredential = (data: Record<string, any>) =>
+  request<WriteCredential>('/api/v1/control/credentials', { method: 'POST', data });
+
+export const deleteWriteCredential = (id: string) =>
+  request(`/api/v1/control/credentials/${id}`, { method: 'DELETE' });
