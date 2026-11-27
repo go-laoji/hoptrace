@@ -1,4 +1,4 @@
-import { PlusOutlined, SyncOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PlusOutlined, SyncOutlined } from '@ant-design/icons';
 import {
   type ActionType,
   ModalForm,
@@ -23,7 +23,7 @@ import {
   pollDevice,
   updateDevice,
 } from '@/services/hoptrace';
-import { fmtUnix, fmtUptime, IF_KIND_META, ROLE_META, STATUS_META } from '../constants';
+import { downloadCsv, fmtBps, fmtUnix, fmtUptime, IF_KIND_META, ROLE_META, STATUS_META } from '../constants';
 
 const DevicesPage: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
@@ -162,6 +162,23 @@ const DevicesPage: React.FC = () => {
         columns={columns}
         search={{ labelWidth: 'auto' }}
         toolBarRender={() => [
+          <Button
+            key="export"
+            icon={<DownloadOutlined />}
+            onClick={async () => {
+              const res = await listDevices({ page: 1, pageSize: 500 });
+              downloadCsv(
+                `hoptrace-devices-${Date.now()}.csv`,
+                ['名称', '管理IP', '状态', '角色', '厂商', '型号', '版本', '序列号', 'CPU%', '内存%', '温度', '接入终端数'],
+                (res.items || []).map((d) => [
+                  d.name, d.mgmtIp, d.status, d.role, d.vendor, d.model, d.osVersion, d.serial,
+                  d.cpuUsage, d.memUsage, d.temperature, d.endpointCount,
+                ]),
+              );
+            }}
+          >
+            导出 CSV
+          </Button>,
           <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             手工添加设备
           </Button>,
@@ -289,8 +306,24 @@ const DevicesPage: React.FC = () => {
                     return <Tag color={m.color}>{m.label}</Tag>;
                   },
                 },
-                { title: '速率(Mbps)', dataIndex: 'speedMbps', width: 100 },
-                { title: '学习MAC', dataIndex: 'macCount', width: 85 },
+                { title: '速率(Mbps)', dataIndex: 'speedMbps', width: 95 },
+                {
+                  title: '实时流量 / 利用率',
+                  width: 175,
+                  render: (_, it) =>
+                    Number(it.inBps || 0) > 0 || Number(it.outBps || 0) > 0
+                      ? `↓${fmtBps(it.inBps)} / ↑${fmtBps(it.outBps)} (${it.utilizationPct || 0}%)`
+                      : '-',
+                },
+                {
+                  title: '错包(入/出)',
+                  width: 95,
+                  render: (_, it) =>
+                    Number(it.inErrors || 0) > 0 || Number(it.outErrors || 0) > 0
+                      ? <Tag color="error">{`${it.inErrors || 0}/${it.outErrors || 0}`}</Tag>
+                      : '0/0',
+                },
+                { title: '学习MAC', dataIndex: 'macCount', width: 80 },
                 { title: 'LLDP 邻居', dataIndex: 'neighbor', render: (v) => v || '-' },
               ]}
             />

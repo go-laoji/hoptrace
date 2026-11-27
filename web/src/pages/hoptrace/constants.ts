@@ -64,3 +64,27 @@ export function fmtUptime(secs?: string | number): string {
   const m = Math.floor((n % 3600) / 60);
   return d > 0 ? `${d}天 ${h}小时` : `${h}小时 ${m}分`;
 }
+
+export function fmtBps(bps?: string | number): string {
+  const n = Number(bps || 0);
+  if (!n) return '0 bps';
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)} Gbps`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)} Mbps`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)} Kbps`;
+  return `${n} bps`;
+}
+
+export function downloadCsv(filename: string, headers: string[], rows: (string | number | undefined)[][]) {
+  const esc = (v: string | number | undefined) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

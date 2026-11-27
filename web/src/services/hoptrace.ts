@@ -121,6 +121,20 @@ export interface DeviceInterface {
   aggIfIndex: number;
   macCount: number;
   neighbor: string;
+  inBps?: string;
+  outBps?: string;
+  utilizationPct?: number;
+  inErrors?: string;
+  outErrors?: string;
+}
+
+export interface InterfaceMetricPoint {
+  at: string;
+  inBps: string;
+  outBps: string;
+  utilizationPct: number;
+  inErrors: string;
+  outErrors: string;
 }
 
 export interface Credential {
@@ -164,6 +178,9 @@ export interface TopoNode {
   type: string;
   managed: boolean;
   endpointCount: number;
+  posX?: number;
+  posY?: number;
+  hasPos?: boolean;
 }
 
 export interface TopoLink {
@@ -176,6 +193,9 @@ export interface TopoLink {
   confidence: number;
   status: string;
   members: string[];
+  inBps?: string;
+  outBps?: string;
+  utilizationPct?: number;
 }
 
 export interface TopologyData {
@@ -204,6 +224,10 @@ export interface Endpoint {
   firstSeen: string;
   lastSeen: string;
   remark: string;
+  accessType?: 'wired' | 'wireless';
+  ssid?: string;
+  apName?: string;
+  rssi?: number;
 }
 
 export interface EndpointLocation {
@@ -299,6 +323,7 @@ export const listEndpoints = (params: {
   trust?: string;
   type?: string;
   deviceId?: string;
+  accessType?: string;
   page?: number;
   pageSize?: number;
 }) => request<{ items: Endpoint[]; total: string }>('/api/v1/endpoints', { params });
@@ -483,3 +508,186 @@ export function subscribeLiveEvents(
   });
   return () => es.close();
 }
+
+// ---------- M3: 路径追踪 / 布局保存 / 接口速率 / 批量导入 / 告警 / Syslog / IPAM / 配置备份 ----------
+
+export interface PathHop {
+  nodeId: string;
+  kind: string;
+  name: string;
+  ip: string;
+  role: string;
+  inPort: string;
+  outPort: string;
+  linkId: string;
+}
+
+export interface TracePathReply {
+  found: boolean;
+  message: string;
+  hops: PathHop[];
+  nodeIds: string[];
+  linkIds: string[];
+}
+
+export const tracePath = (source: string, target = '') =>
+  request<TracePathReply>('/api/v1/topology/trace', { params: { source, target } });
+
+export const saveTopologyLayout = (positions: { deviceId: string; x: number; y: number }[]) =>
+  request('/api/v1/topology/layout', { method: 'POST', data: { positions } });
+
+export const resetTopologyLayout = () =>
+  request('/api/v1/topology/layout', { method: 'DELETE' });
+
+export const listInterfaceMetrics = (deviceId: string, ifIndex: number, limit = 30) =>
+  request<{ items: InterfaceMetricPoint[] }>(`/api/v1/devices/${deviceId}/interfaces/${ifIndex}/metrics`, {
+    params: { limit },
+  });
+
+export const batchImportEndpoints = (items: {
+  mac: string;
+  name?: string;
+  owner?: string;
+  tags?: string[];
+  trust?: string;
+  type?: string;
+  remark?: string;
+}[]) =>
+  request<{ updated: number; skipped: number; errors: string[] }>('/api/v1/endpoints/import', {
+    method: 'POST',
+    data: { items },
+  });
+
+export interface AlertItem {
+  id: string;
+  kind: string;
+  severity: string;
+  title: string;
+  message: string;
+  targetKey: string;
+  deviceId: string;
+  endpointId: string;
+  status: string;
+  ackedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlertChannel {
+  id: string;
+  name: string;
+  kind: string;
+  webhookUrl: string;
+  enabled: boolean;
+  kinds: string[];
+  createdAt: string;
+}
+
+export interface SyslogEntry {
+  id: string;
+  sourceIp: string;
+  deviceId: string;
+  deviceName: string;
+  severity: number;
+  facility: string;
+  tag: string;
+  message: string;
+  receivedAt: string;
+}
+
+export const listAlerts = (params: { status?: string; severity?: string; kind?: string; page?: number; pageSize?: number }) =>
+  request<{ items: AlertItem[]; total: string }>('/api/v1/alerts', { params });
+
+export const ackAlert = (id: string) =>
+  request<AlertItem>(`/api/v1/alerts/${id}/ack`, { method: 'POST', data: {} });
+
+export const resolveAlert = (id: string) =>
+  request<AlertItem>(`/api/v1/alerts/${id}/resolve`, { method: 'POST', data: {} });
+
+export const listAlertChannels = () => request<{ items: AlertChannel[] }>('/api/v1/alerts/channels');
+
+export const saveAlertChannel = (data: Record<string, any>) =>
+  request<AlertChannel>('/api/v1/alerts/channels', { method: 'POST', data });
+
+export const deleteAlertChannel = (id: string) =>
+  request(`/api/v1/alerts/channels/${id}`, { method: 'DELETE' });
+
+export const testAlertChannel = (id: string) =>
+  request<{ ok: boolean; detail: string }>(`/api/v1/alerts/channels/${id}/test`, { method: 'POST', data: {} });
+
+export const listSyslogs = (params: { keyword?: string; sourceIp?: string; maxSeverity?: number; page?: number; pageSize?: number }) =>
+  request<{ items: SyslogEntry[]; total: string }>('/api/v1/syslogs', { params });
+
+export interface SubnetSummary {
+  cidr: string;
+  totalHosts: number;
+  usedHosts: number;
+  freeHosts: number;
+  usagePct: number;
+  conflictCount: number;
+  gatewayDevice: string;
+}
+
+export interface IpLease {
+  ip: string;
+  used: boolean;
+  mac: string;
+  macs: string[];
+  conflict: boolean;
+  vendor: string;
+  endpointName: string;
+  deviceName: string;
+  ifName: string;
+}
+
+export interface NetworkAnomaly {
+  kind: string;
+  severity: string;
+  target: string;
+  detail: string;
+  deviceId: string;
+  deviceName: string;
+  ifName: string;
+}
+
+export const listSubnets = () => request<{ items: SubnetSummary[] }>('/api/v1/ipam/subnets');
+
+export const getSubnetDetail = (cidr: string) =>
+  request<{ summary: SubnetSummary; leases: IpLease[] }>('/api/v1/ipam/subnet', { params: { cidr } });
+
+export const listAnomalies = () => request<{ items: NetworkAnomaly[] }>('/api/v1/ipam/anomalies');
+
+export interface ConfigBackup {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  sha256: string;
+  sizeBytes: number;
+  changed: boolean;
+  trigger: string;
+  status: string;
+  error: string;
+  createdAt: string;
+}
+
+export interface DiffLine {
+  kind: 'context' | 'add' | 'del';
+  oldLine: number;
+  newLine: number;
+  text: string;
+}
+
+export const listBackups = (params: { deviceId?: string; page?: number; pageSize?: number }) =>
+  request<{ items: ConfigBackup[]; total: string }>('/api/v1/backups', { params });
+
+export const runBackup = (deviceId: string) =>
+  request<ConfigBackup>('/api/v1/backups/run', { method: 'POST', data: { deviceId } });
+
+export const getBackupDetail = (id: string) =>
+  request<{ meta: ConfigBackup; content: string }>(`/api/v1/backups/${id}`);
+
+export const diffBackups = (fromId: string, toId: string) =>
+  request<{ from: ConfigBackup; to: ConfigBackup; added: number; removed: number; lines: DiffLine[] }>(
+    '/api/v1/backups/diff',
+    { params: { fromId, toId } },
+  );

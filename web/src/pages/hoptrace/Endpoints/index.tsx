@@ -1,3 +1,4 @@
+import { DownloadOutlined, UploadOutlined, WifiOutlined } from '@ant-design/icons';
 import {
   type ActionType,
   ModalForm,
@@ -8,9 +9,10 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
-import { Badge, Descriptions, Drawer, message, Popconfirm, Space, Table, Tabs, Tag, Timeline } from 'antd';
+import { Badge, Button, Descriptions, Drawer, Input, message, Modal, Popconfirm, Space, Table, Tabs, Tag, Timeline } from 'antd';
 import React, { useRef, useState } from 'react';
 import {
+  batchImportEndpoints,
   createControlAction,
   deleteEndpoint,
   type Endpoint,
@@ -21,13 +23,15 @@ import {
   listEvents,
   updateEndpoint,
 } from '@/services/hoptrace';
-import { ENDPOINT_TYPE_META, EVENT_META, fmtUnix, STATUS_META, TRUST_META } from '../constants';
+import { downloadCsv, ENDPOINT_TYPE_META, EVENT_META, fmtUnix, STATUS_META, TRUST_META } from '../constants';
 
 const EndpointsPage: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const [detail, setDetail] = useState<EndpointDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [editing, setEditing] = useState<Endpoint | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importCsv, setImportCsv] = useState('');
 
   const openDetail = async (id: string) => {
     setDetailLoading(true);
@@ -84,10 +88,27 @@ const EndpointsPage: React.FC = () => {
       },
     },
     {
+      title: '接入方式',
+      dataIndex: 'accessType',
+      width: 95,
+      valueEnum: { wired: { text: '有线' }, wireless: { text: '无线 Wi-Fi' } },
+      render: (_, r) =>
+        r.accessType === 'wireless' ? (
+          <Tag color="cyan" icon={<WifiOutlined />}>
+            无线
+          </Tag>
+        ) : (
+          <Tag>有线</Tag>
+        ),
+    },
+    {
       title: '接入位置',
       dataIndex: 'deviceName',
       search: false,
-      render: (_, r) => `${r.deviceName || '-'} / ${r.ifName || '-'} (VLAN ${r.vlan})`,
+      render: (_, r) =>
+        r.accessType === 'wireless'
+          ? `${r.apName || r.deviceName || '-'} · SSID:${r.ssid || '-'} (${r.rssi || 0} dBm)`
+          : `${r.deviceName || '-'} / ${r.ifName || '-'} (VLAN ${r.vlan})`,
     },
     { title: 'OUI 厂商', dataIndex: 'vendor', search: false, ellipsis: true, width: 180, render: (v) => v || '-' },
     { title: '名称 / 责任人', dataIndex: 'name', search: false, width: 140, render: (_, r) => [r.name, r.owner].filter(Boolean).join(' / ') || '-' },
@@ -163,12 +184,39 @@ const EndpointsPage: React.FC = () => {
                 rowKey="id"
                 columns={columns}
                 search={{ labelWidth: 'auto' }}
+                toolBarRender={() => [
+                  <Button
+                    key="import"
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    批量导入归属 CSV
+                  </Button>,
+                  <Button
+                    key="export"
+                    icon={<DownloadOutlined />}
+                    onClick={async () => {
+                      const res = await listEndpoints({ page: 1, pageSize: 500 });
+                      downloadCsv(
+                        `hoptrace-endpoints-${Date.now()}.csv`,
+                        ['MAC', 'IP', '状态', '接入方式', '类型', '信任状态', '名称', '责任人', '接入设备', '端口/AP', 'VLAN', '厂商'],
+                        (res.items || []).map((e) => [
+                          e.mac, e.ip, e.status, e.accessType || 'wired', e.type, e.trust,
+                          e.name, e.owner, e.deviceName, e.apName || e.ifName, e.vlan, e.vendor,
+                        ]),
+                      );
+                    }}
+                  >
+                    导出 CSV
+                  </Button>,
+                ]}
                 request={async (params) => {
                   const res = await listEndpoints({
                     keyword: params.keyword,
                     status: params.status,
                     trust: params.trust,
                     type: params.type,
+                    accessType: params.accessType,
                     page: params.current,
                     pageSize: params.pageSize,
                   });
@@ -305,6 +353,51 @@ const EndpointsPage: React.FC = () => {
           </Space>
         )}
       </Drawer>
+
+      <Modal
+        title="批量导入终端归属信息 (CSV)"
+        open={importOpen}
+        width={640}
+        onCancel={() => setImportOpen(false)}
+        onOk={async () => {
+          const lines = importCsv
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const rows = lines
+            .filter((l, i) => !(i === 0 && l.toLowerCase().startsWith('mac')))
+            .map((l) => {
+              const [mac, name, owner, trust, tags, remark] = l.split(',').map((x) => (x || '').trim());
+              return {
+                mac,
+                name,
+                owner,
+                trust,
+                tags: tags ? tags.split(';').filter(Boolean) : [],
+                remark,
+              };
+            });
+          if (rows.length === 0) {
+            message.warning('请输入至少一行 CSV 数据');
+            return;
+          }
+          const res = await batchImportEndpoints(rows);
+          message.success(`导入完成：更新 ${res.updated} 条，跳过 ${res.skipped} 条`);
+          setImportOpen(false);
+          setImportCsv('');
+          actionRef.current?.reload();
+        }}
+      >
+        <div style={{ marginBottom: 8, fontSize: 12, color: '#595959' }}>
+          每行格式：<code>mac,名称,责任人,信任状态(trusted/unknown/blocked),标签(分号分隔),备注</code>
+        </div>
+        <Input.TextArea
+          rows={8}
+          value={importCsv}
+          onChange={(e) => setImportCsv(e.target.value)}
+          placeholder={'mac,name,owner,trust,tags,remark\nf8:bc:12:11:22:01,张三笔记本,张三,trusted,研发部;办公,3楼工位'}
+        />
+      </Modal>
     </PageContainer>
   );
 };

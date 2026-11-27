@@ -1,12 +1,16 @@
 import {
   ApartmentOutlined,
+  CameraOutlined,
+  CompassOutlined,
   ExpandOutlined,
   ReloadOutlined,
+  SaveOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import { Graph } from '@antv/g6';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
 import {
+  Alert,
   Badge,
   Button,
   Descriptions,
@@ -14,8 +18,11 @@ import {
   Empty,
   Input,
   message,
+  Modal,
   Segmented,
+  Select,
   Space,
+  Steps,
   Switch,
   Tag,
 } from 'antd';
@@ -23,12 +30,16 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getTopology,
   rebuildTopology,
+  resetTopologyLayout,
+  saveTopologyLayout,
   subscribeLiveEvents,
   type TopoLink,
   type TopologyData,
   type TopoNode,
+  tracePath,
+  type TracePathReply,
 } from '@/services/hoptrace';
-import { ENDPOINT_TYPE_META, ROLE_META, STATUS_META } from '../constants';
+import { ENDPOINT_TYPE_META, fmtBps, ROLE_META, STATUS_META } from '../constants';
 
 const ROLE_THEME: Record<string, { border: string; bg: string; badge: string }> = {
   firewall: { border: '#fa541c', bg: '#fff2e8', badge: '防火墙' },
@@ -69,6 +80,11 @@ const TopologyPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<TopoNode | null>(null);
   const [selectedLink, setSelectedLink] = useState<TopoLink | null>(null);
   const [sseConnected, setSseConnected] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [traceOpen, setTraceOpen] = useState(false);
+  const [traceSrc, setTraceSrc] = useState('');
+  const [traceDst, setTraceDst] = useState('');
+  const [traceResult, setTraceResult] = useState<TracePathReply | null>(null);
 
   const fetchTopology = useCallback(async () => {
     setLoading(true);
@@ -113,11 +129,24 @@ const TopologyPage: React.FC = () => {
     }
     if (!topo.nodes.length) return;
 
-    const nodeMap = new Map(topo.nodes.map((n) => [n.id, n]));
-    const linkMap = new Map(topo.links.map((l) => [l.id, l]));
+    const visibleNodes =
+      roleFilter.length === 0
+        ? topo.nodes
+        : topo.nodes.filter((n) => n.kind === 'endpoint' || roleFilter.includes(n.role));
+    const visibleIds = new Set(visibleNodes.map((n) => n.id));
+    const visibleLinks = topo.links.filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target));
 
-    const g6Nodes = topo.nodes.map((n) => {
+    const nodeMap = new Map(visibleNodes.map((n) => [n.id, n]));
+    const linkMap = new Map(visibleLinks.map((l) => [l.id, l]));
+    const traceNodeSet = new Set(traceResult?.found ? traceResult.nodeIds || [] : []);
+    const traceLinkSet = new Set(traceResult?.found ? traceResult.linkIds || [] : []);
+    const hasSavedLayout =
+      visibleNodes.filter((n) => n.kind === 'device').length > 0 &&
+      visibleNodes.filter((n) => n.kind === 'device').every((n) => n.hasPos);
+
+    const g6Nodes = visibleNodes.map((n) => {
       const isEp = n.kind === 'endpoint';
+      const inTrace = traceNodeSet.has(n.id);
       if (isEp) {
         const online = n.status === 'online';
         return {
@@ -127,9 +156,9 @@ const TopologyPage: React.FC = () => {
           style: {
             size: [132, 40],
             radius: 20,
-            fill: online ? '#f6ffed' : '#f5f5f5',
-            stroke: online ? '#52c41a' : '#d9d9d9',
-            lineWidth: 1.5,
+            fill: inTrace ? '#fff7e6' : online ? '#f6ffed' : '#f5f5f5',
+            stroke: inTrace ? '#fa8c16' : online ? '#52c41a' : '#d9d9d9',
+            lineWidth: inTrace ? 3 : 1.5,
             shadowColor: 'rgba(0,0,0,0.06)',
             shadowBlur: 6,
             shadowOffsetY: 2,
@@ -153,16 +182,16 @@ const TopologyPage: React.FC = () => {
         type: 'rect',
         data: { ...n },
         style: {
+          ...(hasSavedLayout && n.hasPos ? { x: n.posX, y: n.posY } : {}),
           size: [152, 54],
           radius: 10,
-          fill: n.managed ? '#ffffff' : '#fafafa',
-          stroke: offline ? '#ff4d4f' : n.managed ? theme.border : '#bfbfbf',
-          lineWidth: n.role === 'core' || n.role === 'firewall' ? 2.5 : 1.8,
+          fill: inTrace ? '#fff7e6' : n.managed ? '#ffffff' : '#fafafa',
+          stroke: inTrace ? '#fa8c16' : offline ? '#ff4d4f' : n.managed ? theme.border : '#bfbfbf',
+          lineWidth: inTrace ? 3.5 : n.role === 'core' || n.role === 'firewall' ? 2.5 : 1.8,
           lineDash: n.managed ? undefined : [5, 3],
           shadowColor: 'rgba(15, 23, 42, 0.08)',
           shadowBlur: 10,
           shadowOffsetY: 3,
-          // 节点仅显示名称和管理 IP，保持画布整洁
           labelText: label,
           labelPlacement: 'center' as const,
           labelFontSize: 12,
@@ -170,7 +199,6 @@ const TopologyPage: React.FC = () => {
           labelLineHeight: 18,
           labelFill: '#1f2937',
           labelMaxWidth: 138,
-          // 左上角角色小徽章，视觉区分设备角色
           badges: [
             {
               text: theme.badge,
@@ -188,17 +216,23 @@ const TopologyPage: React.FC = () => {
       };
     });
 
-    const g6Edges = topo.links.map((l) => {
+    const g6Edges = visibleLinks.map((l) => {
       const isLag = (l.members || []).length > 1;
       const isAccess = l.kind === 'access';
       const isDown = l.status === 'down';
-      const stroke = isDown
-        ? '#ff4d4f'
-        : isAccess
-          ? '#95de64'
-          : isLag
-            ? '#722ed1'
-            : '#91caff';
+      const inTrace = traceLinkSet.has(l.id);
+      const util = l.utilizationPct || 0;
+      const stroke = inTrace
+        ? '#fa8c16'
+        : isDown || util >= 90
+          ? '#ff4d4f'
+          : util >= 70
+            ? '#fa8c16'
+            : isAccess
+              ? '#95de64'
+              : isLag
+                ? '#722ed1'
+                : '#91caff';
       return {
         id: l.id,
         source: l.source,
@@ -207,17 +241,17 @@ const TopologyPage: React.FC = () => {
         data: { ...l },
         style: {
           stroke,
-          lineWidth: isLag ? 3 : isAccess ? 1.5 : 2,
+          lineWidth: inTrace ? 4 : isLag ? 3 : isAccess ? 1.5 : 2,
           lineDash: isAccess ? [4, 4] : undefined,
-          // 连线默认不显示文字，悬停时通过 tooltip 展示连接详情
           labelText: '',
           cursor: 'pointer',
         },
       };
     });
 
-    const layoutCfg =
-      layoutType === 'dagre'
+    const layoutCfg = hasSavedLayout
+      ? undefined
+      : layoutType === 'dagre'
         ? { type: 'dagre', rankdir: 'TB', nodesep: 48, ranksep: 115, nodeSize: [160, 60] }
         : layoutType === 'concentric'
           ? { type: 'concentric', nodeSize: 170, preventOverlap: true, equidistant: true }
@@ -292,6 +326,7 @@ const TopologyPage: React.FC = () => {
                   <div><strong>本端端口：</strong>${escapeHtml(shortPort(edge.sourcePort))}</div>
                   ${edge.targetPort ? `<div><strong>对端端口：</strong>${escapeHtml(shortPort(edge.targetPort))}</div>` : ''}
                   <div><strong>链路类型：</strong>${escapeHtml(edge.kind.toUpperCase())}${isLag ? ' (Eth-Trunk)' : ''} · 置信度 ${Math.round((edge.confidence || 0) * 100)}%</div>
+                  ${Number(edge.inBps || 0) > 0 || Number(edge.outBps || 0) > 0 ? `<div><strong>实时流量：</strong>↓${escapeHtml(fmtBps(edge.inBps))} / ↑${escapeHtml(fmtBps(edge.outBps))} (${edge.utilizationPct || 0}%)</div>` : ''}
                   ${membersHtml}
                 </div>`;
             }
@@ -351,7 +386,55 @@ const TopologyPage: React.FC = () => {
       graph.destroy();
       graphRef.current = null;
     };
-  }, [topo, layoutType]);
+  }, [topo, layoutType, roleFilter, traceResult]);
+
+  const handleSaveLayout = async () => {
+    if (!graphRef.current) return;
+    const positions: { deviceId: string; x: number; y: number }[] = [];
+    for (const n of topo.nodes) {
+      if (n.kind !== 'device') continue;
+      const d: any = graphRef.current.getNodeData(n.id);
+      const x = Number(d?.style?.x);
+      const y = Number(d?.style?.y);
+      if (!Number.isNaN(x) && !Number.isNaN(y)) {
+        positions.push({ deviceId: n.refId, x, y });
+      }
+    }
+    if (positions.length === 0) return;
+    await saveTopologyLayout(positions);
+    message.success(`已保存 ${positions.length} 个节点的自定义位置`);
+    fetchTopology();
+  };
+
+  const handleResetLayout = async () => {
+    await resetTopologyLayout();
+    message.success('已重置为自动布局');
+    fetchTopology();
+  };
+
+  const handleExportPng = async () => {
+    if (!graphRef.current) return;
+    const dataUrl = await graphRef.current.toDataURL({ mode: 'overall', type: 'image/png' });
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `hoptrace-topology-${Date.now()}.png`;
+    a.click();
+  };
+
+  const handleTrace = async () => {
+    if (!traceSrc.trim()) {
+      message.warning('请输入源 IP / MAC / 设备名');
+      return;
+    }
+    const res = await tracePath(traceSrc.trim(), traceDst.trim());
+    setTraceResult(res);
+    setTraceOpen(false);
+    if (!res.found) {
+      message.warning(res.message || '未找到路径');
+    } else {
+      message.success(`路径追踪成功：${res.message}`);
+    }
+  };
 
   const handleSearch = (kw: string) => {
     setSearchText(kw);
@@ -397,36 +480,78 @@ const TopologyPage: React.FC = () => {
           key="search"
           placeholder="搜索设备 / IP / 终端"
           allowClear
-          style={{ width: 220 }}
+          style={{ width: 190 }}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onSearch={handleSearch}
         />,
+        <Select
+          key="role"
+          mode="multiple"
+          allowClear
+          placeholder="按角色过滤"
+          style={{ minWidth: 130 }}
+          maxTagCount={1}
+          value={roleFilter}
+          onChange={setRoleFilter}
+          options={Object.entries(ROLE_META).map(([k, v]) => ({ label: v.label, value: k }))}
+        />,
+        <Button key="trace" icon={<CompassOutlined />} onClick={() => setTraceOpen(true)}>
+          路径追踪
+        </Button>,
         <Segmented
           key="layout"
           value={layoutType}
           onChange={(v) => setLayoutType(v as any)}
           options={[
-            { label: '层次布局', value: 'dagre' },
+            { label: '层次', value: 'dagre' },
             { label: '力导向', value: 'force' },
             { label: '同心圆', value: 'concentric' },
           ]}
         />,
-        <Space key="ep-toggle" size={6}>
-          <span style={{ fontSize: 13 }}>展开全部终端</span>
-          <Switch checked={includeAllEndpoints} onChange={setIncludeAllEndpoints} />
+        <Space key="ep-toggle" size={4}>
+          <span style={{ fontSize: 12 }}>全部终端</span>
+          <Switch size="small" checked={includeAllEndpoints} onChange={setIncludeAllEndpoints} />
         </Space>,
-        <Button key="fit" icon={<ExpandOutlined />} onClick={() => graphRef.current?.fitView()}>
-          自适应
+        <Button key="save" icon={<SaveOutlined />} onClick={handleSaveLayout}>
+          保存布局
         </Button>,
+        <Button key="reset" onClick={handleResetLayout}>
+          重置
+        </Button>,
+        <Button key="png" icon={<CameraOutlined />} onClick={handleExportPng}>
+          导出 PNG
+        </Button>,
+        <Button key="fit" icon={<ExpandOutlined />} onClick={() => graphRef.current?.fitView()} />,
         <Button key="rebuild" icon={<SyncOutlined />} loading={rebuilding} onClick={handleRebuild}>
-          重建拓扑
+          重建
         </Button>,
-        <Button key="reload" type="primary" icon={<ReloadOutlined />} loading={loading} onClick={fetchTopology}>
-          刷新
-        </Button>,
+        <Button key="reload" type="primary" icon={<ReloadOutlined />} loading={loading} onClick={fetchTopology} />,
       ]}
     >
+      {traceResult?.found && (
+        <Alert
+          type="info"
+          showIcon
+          closable
+          onClose={() => setTraceResult(null)}
+          style={{ marginBottom: 12 }}
+          message={`路径追踪结果（${traceResult.message}）`}
+          description={
+            <Steps
+              size="small"
+              current={traceResult.hops.length}
+              style={{ marginTop: 8 }}
+              items={traceResult.hops.map((h) => ({
+                title: h.name,
+                description: [h.ip, h.inPort && `入:${shortPort(h.inPort)}`, h.outPort && `出:${shortPort(h.outPort)}`]
+                  .filter(Boolean)
+                  .join(' · '),
+              }))}
+            />
+          }
+        />
+      )}
       <ProCard
         styles={{
           body: {
@@ -567,6 +692,33 @@ const TopologyPage: React.FC = () => {
           </Descriptions>
         )}
       </Drawer>
+
+      <Modal
+        title="路径追踪 (Path Trace)"
+        open={traceOpen}
+        onOk={handleTrace}
+        onCancel={() => setTraceOpen(false)}
+        okText="开始追踪"
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <div>
+            <div style={{ marginBottom: 4 }}>源地址（终端 IP / MAC 或设备名/IP）</div>
+            <Input
+              placeholder="例如 10.255.10.101 或 f8:bc:12:11:22:01"
+              value={traceSrc}
+              onChange={(e) => setTraceSrc(e.target.value)}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 4 }}>目标地址（留空默认追踪至防火墙/核心交换机）</div>
+            <Input
+              placeholder="可选：目标 IP / MAC / 设备名"
+              value={traceDst}
+              onChange={(e) => setTraceDst(e.target.value)}
+            />
+          </div>
+        </Space>
+      </Modal>
     </PageContainer>
   );
 };

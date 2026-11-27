@@ -35,6 +35,24 @@ export default [
     component: './hoptrace/Discovery',
   },
   {
+    path: '/alerts',
+    name: '告警与日志',
+    icon: 'BellOutlined',
+    component: './hoptrace/Alerts',
+  },
+  {
+    path: '/ipam',
+    name: 'IPAM 与异常',
+    icon: 'GlobalOutlined',
+    component: './hoptrace/Ipam',
+  },
+  {
+    path: '/backups',
+    name: '配置备份',
+    icon: 'FileTextOutlined',
+    component: './hoptrace/Backups',
+  },
+  {
     path: '/control',
     name: '管控与审批',
     icon: 'SafetyCertificateOutlined',
