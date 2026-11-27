@@ -28,6 +28,25 @@
 
 ---
 
+## 界面预览
+
+### 总览仪表盘
+![总览仪表盘](docs/screenshots/dashboard.png)
+
+### 交互式网络拓扑（支持展开全部终端、防遮挡重绘、路径追踪）
+![网络拓扑](docs/screenshots/topology.png)
+
+### 网络设备管理（多机房/办公区归属、堆叠与健康状态）
+![网络设备管理](docs/screenshots/devices.png)
+
+### 接入终端台账与定位（OUI 厂商识别、VLAN/端口精确定位）
+![接入终端管理](docs/screenshots/endpoints.png)
+
+### IPAM 子网占用率与网络异常检测
+![IPAM 与异常检测](docs/screenshots/ipam.png)
+
+---
+
 ## 核心特性
 
 - **多机房 / 办公区管理**：按机房、办公区、分支机构、园区维度划分并统计设备与终端，支持批量划入/移出及专属拓扑视图。
