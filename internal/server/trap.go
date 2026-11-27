@@ -128,11 +128,15 @@ func (s *TrapServer) schedule(ip, trapOID string) {
 		if err != nil || dev == nil || !dev.Managed {
 			return
 		}
-		if err := s.poll.PollAndRefresh(ctx, dev.ID); err != nil {
+		if err := s.poll.PollDevice(ctx, dev.ID); err != nil {
 			log.Warn("trap incremental poll failed", "ip", ip, "device", dev.ID, "err", err)
-		} else {
-			log.Info("trap incremental poll completed", "ip", ip, "device", dev.Name)
+			return
 		}
+		if err := s.poll.RefreshWithNotice(ctx, "trap", dev.Name, "收到 SNMP Trap，已增量更新 "+dev.Name); err != nil {
+			log.Warn("trap refresh failed", "ip", ip, "device", dev.ID, "err", err)
+			return
+		}
+		log.Info("trap incremental poll completed", "ip", ip, "device", dev.Name)
 	})
 }
 

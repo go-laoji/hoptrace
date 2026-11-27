@@ -236,6 +236,7 @@ type PollUsecase struct {
 	collector Collector
 	topo      *TopologyUsecase
 	endpoints *EndpointUsecase
+	bus       *EventBus
 	opts      Options
 
 	mu       sync.Mutex
@@ -243,9 +244,9 @@ type PollUsecase struct {
 	refresh  sync.Mutex
 }
 
-func NewPollUsecase(devices DeviceRepo, creds CredentialRepo, c Collector, topo *TopologyUsecase, eps *EndpointUsecase, opts Options) *PollUsecase {
+func NewPollUsecase(devices DeviceRepo, creds CredentialRepo, c Collector, topo *TopologyUsecase, eps *EndpointUsecase, bus *EventBus, opts Options) *PollUsecase {
 	return &PollUsecase{
-		devices: devices, creds: creds, collector: c, topo: topo, endpoints: eps,
+		devices: devices, creds: creds, collector: c, topo: topo, endpoints: eps, bus: bus,
 		opts: opts.withDefaults(), inflight: map[uint]struct{}{},
 	}
 }
@@ -336,6 +337,11 @@ func (uc *PollUsecase) PollAndRefresh(ctx context.Context, id uint) error {
 
 // Refresh 重建拓扑并同步终端。串行执行。
 func (uc *PollUsecase) Refresh(ctx context.Context) error {
+	return uc.RefreshWithNotice(ctx, "poll", "", "拓扑与终端已更新")
+}
+
+// RefreshWithNotice 重建拓扑与终端并通过 SSE 通知在线前端。
+func (uc *PollUsecase) RefreshWithNotice(ctx context.Context, source, device, msg string) error {
 	uc.refresh.Lock()
 	defer uc.refresh.Unlock()
 	if err := uc.topo.Rebuild(ctx); err != nil {
@@ -344,6 +350,7 @@ func (uc *PollUsecase) Refresh(ctx context.Context) error {
 	if err := uc.endpoints.Sync(ctx); err != nil {
 		return fmt.Errorf("sync endpoints: %w", err)
 	}
+	uc.bus.Publish(LiveEvent{Type: "topology_updated", Source: source, Device: device, Message: msg})
 	return nil
 }
 

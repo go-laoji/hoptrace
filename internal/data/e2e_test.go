@@ -33,7 +33,7 @@ func TestEndToEndDiscoveryWithHuaweiSim(t *testing.T) {
 	opts := biz.Options{Concurrency: 4, SuspectMACThreshold: 30, OfflineMissRounds: 2, MoveConfirmRounds: 2}
 	topoUC := biz.NewTopologyUsecase(devRepo, topoRepo, epRepo, opts)
 	epUC := biz.NewEndpointUsecase(epRepo, devRepo, opts)
-	pollUC := biz.NewPollUsecase(devRepo, credRepo, collector, topoUC, epUC, opts)
+	pollUC := biz.NewPollUsecase(devRepo, credRepo, collector, topoUC, epUC, biz.NewEventBus(), opts)
 	credUC := biz.NewCredentialUsecase(credRepo)
 	discUC := biz.NewDiscoveryUsecase(jobRepo, devRepo, credRepo, collector, pollUC)
 	dashUC := biz.NewDashboardUsecase(statsRepo)

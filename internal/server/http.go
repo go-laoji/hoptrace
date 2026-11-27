@@ -20,6 +20,7 @@ import (
 func NewHTTPServer(
 	c *conf.Server,
 	authUC *biz.AuthUsecase,
+	bus *biz.EventBus,
 	dev *service.DeviceService,
 	cred *service.CredentialService,
 	disc *service.DiscoveryService,
@@ -58,6 +59,9 @@ func NewHTTPServer(
 	v1.RegisterDashboardServiceHTTPServer(srv, dash)
 	v1.RegisterAuthServiceHTTPServer(srv, auth)
 	v1.RegisterControlServiceHTTPServer(srv, ctrl)
+
+	// SSE 实时推送(拓扑/Trap 增量变更)
+	srv.Handle("/api/v1/events/stream", sseHandler(bus, authUC))
 
 	// 若配置了前端构建目录(如 web/dist),由后端直接托管 SPA
 	if dir := strings.TrimSpace(c.GetStaticDir()); dir != "" {
