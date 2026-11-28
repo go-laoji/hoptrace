@@ -1,7 +1,6 @@
 package snmpx
 
-// 标准 MIB 与华为私有 MIB OID 常量(均不带前导点)。
-// 华为私有 OID 在 M0 阶段需以官方 MIB 文档和真机 snmpwalk 结果为准校准。
+// 标准 MIB OID 常量(均不带前导点)。厂商私有 OID 各自维护在 driver_<vendor>.go 中。
 const (
 	// SNMPv2-MIB
 	oidSysDescr    = "1.3.6.1.2.1.1.1.0"
@@ -38,19 +37,13 @@ const (
 	oidDot3adAggPortAttached = "1.2.840.10006.300.43.1.2.1.1.13"
 
 	// BRIDGE-MIB & Q-BRIDGE-MIB
-	oidDot1dBaseBridgeAddr   = "1.3.6.1.2.1.17.1.1.0"
-	oidDot1dBasePortIfIndex  = "1.3.6.1.2.1.17.1.4.1.2"
-	oidDot1dTpFdbPort        = "1.3.6.1.2.1.17.4.3.1.2"
-	oidDot1dTpFdbStatus      = "1.3.6.1.2.1.17.4.3.1.3"
-	oidDot1qTpFdbPort        = "1.3.6.1.2.1.17.7.1.2.2.1.2"
-	oidDot1qTpFdbStatus      = "1.3.6.1.2.1.17.7.1.2.2.1.3"
-	oidDot1qPvid             = "1.3.6.1.2.1.17.7.1.4.5.1.1" // dot1dBasePort -> PVID
-
-	// HUAWEI-L2MAM-MIB (华为带 VLAN 的动态 MAC 表; 当 Q-BRIDGE-MIB 为空时作为优先兜底)
-	// hwDynFdbPort: .<m1>.<m2>.<m3>.<m4>.<m5>.<m6>.<vlanId>.<vsiId> -> ifIndex (或 .<vlanId>.<m1..m6>)
-	oidHwDynFdbPort = "1.3.6.1.4.1.2011.5.25.42.2.1.3.1.4"
-	// HUAWEI-L2IF-MIB: hwL2IfPvid (.l2IfPortIndex -> PVID)
-	oidHwL2IfPvid = "1.3.6.1.4.1.2011.5.25.42.1.1.1.3.1.4"
+	oidDot1dBaseBridgeAddr  = "1.3.6.1.2.1.17.1.1.0"
+	oidDot1dBasePortIfIndex = "1.3.6.1.2.1.17.1.4.1.2"
+	oidDot1dTpFdbPort       = "1.3.6.1.2.1.17.4.3.1.2"
+	oidDot1dTpFdbStatus     = "1.3.6.1.2.1.17.4.3.1.3"
+	oidDot1qTpFdbPort       = "1.3.6.1.2.1.17.7.1.2.2.1.2"
+	oidDot1qTpFdbStatus     = "1.3.6.1.2.1.17.7.1.2.2.1.3"
+	oidDot1qPvid            = "1.3.6.1.2.1.17.7.1.4.5.1.1" // dot1dBasePort -> PVID
 
 	// LLDP-MIB (IEEE 802.1AB)
 	oidLldpLocChassisID    = "1.0.8802.1.1.2.1.3.2.0"
@@ -66,25 +59,29 @@ const (
 	oidLldpRemSysCapEn     = "1.0.8802.1.1.2.1.4.1.1.12"
 	oidLldpRemManAddrIfSub = "1.0.8802.1.1.2.1.4.2.1.3"
 
-	// ENTITY-MIB (物理实体: 堆叠成员数 / 序列号)
-	oidEntPhysicalClass     = "1.3.6.1.2.1.47.1.1.1.1.5"
-	oidEntPhysicalSerialNum = "1.3.6.1.2.1.47.1.1.1.1.11"
+	// ENTITY-MIB (物理实体: 堆叠成员数 / 序列号 / 型号 / 软件版本)
+	oidEntPhysicalClass       = "1.3.6.1.2.1.47.1.1.1.1.5"
+	oidEntPhysicalSoftwareRev = "1.3.6.1.2.1.47.1.1.1.1.10"
+	oidEntPhysicalSerialNum   = "1.3.6.1.2.1.47.1.1.1.1.11"
+	oidEntPhysicalModelName   = "1.3.6.1.2.1.47.1.1.1.1.13"
 
-	// HUAWEI-ENTITY-EXTENT-MIB (企业号 2011)
-	oidHwEntityCPUUsage    = "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5"
-	oidHwEntityMemUsage    = "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7"
-	oidHwEntityTemperature = "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11"
+	// ENTITY-SENSOR-MIB (标准温度传感器)
+	oidEntPhySensorType      = "1.3.6.1.2.1.99.1.1.1.1"
+	oidEntPhySensorPrecision = "1.3.6.1.2.1.99.1.1.1.3"
+	oidEntPhySensorValue     = "1.3.6.1.2.1.99.1.1.1.4"
 
-	// HUAWEI-IF-EXT-MIB (华为 Eth-Trunk 聚合口与成员映射, 已在 S9312 VRP 5.130 真机校准)
-	// hwTrunkIfIndex: .<trunkIndex> -> aggIfIndex
-	oidHwTrunkIfIndex = "1.3.6.1.4.1.2011.5.25.41.1.3.3.1.4"
-	// hwTrunkMemEntry: .<trunkIndex>.<memberIfIndex> -> status
-	oidHwTrunkMemStatus = "1.3.6.1.4.1.2011.5.25.41.1.4.1.1.2"
+	// HOST-RESOURCES-MIB (通用 CPU / 内存兜底)
+	oidHrStorageType  = "1.3.6.1.2.1.25.2.3.1.2"
+	oidHrStorageDescr = "1.3.6.1.2.1.25.2.3.1.3"
+	oidHrStorageSize  = "1.3.6.1.2.1.25.2.3.1.5"
+	oidHrStorageUsed  = "1.3.6.1.2.1.25.2.3.1.6"
+	oidHrStorageRam   = "1.3.6.1.2.1.25.2.1.2"
+	oidHrProcessorLd  = "1.3.6.1.2.1.25.3.3.1.2"
 
-	// HUAWEI-WLAN-STATION-MIB (华为无线控制器 AC STA 关联表; 索引为 6 字节 MAC 十进制)
-	oidHwWlanStaAPName = "1.3.6.1.4.1.2011.6.139.18.1.2.1.4"
-	oidHwWlanStaSSID   = "1.3.6.1.4.1.2011.6.139.18.1.2.1.19"
-	oidHwWlanStaVLAN   = "1.3.6.1.4.1.2011.6.139.18.1.2.1.24"
-	oidHwWlanStaIP     = "1.3.6.1.4.1.2011.6.139.18.1.2.1.26"
-	oidHwWlanStaRSSI   = "1.3.6.1.4.1.2011.6.139.18.1.2.1.40"
+	// UCD-SNMP-MIB (Linux/OpenWrt/SMB 网关常用 CPU / 内存兜底)
+	oidUcdMemTotalReal = "1.3.6.1.4.1.2021.4.5.0"
+	oidUcdMemAvailReal = "1.3.6.1.4.1.2021.4.6.0"
+	oidUcdMemBuffer    = "1.3.6.1.4.1.2021.4.14.0"
+	oidUcdMemCached    = "1.3.6.1.4.1.2021.4.15.0"
+	oidUcdSSCpuIdle    = "1.3.6.1.4.1.2021.11.11.0"
 )

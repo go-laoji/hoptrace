@@ -59,7 +59,7 @@ func (e *controlExecutor) Execute(ctx context.Context, dev *biz.Device, cred *bi
 	if protocol == biz.ProtoNetconf {
 		return execNetconf(sess, payload)
 	}
-	return execSSHCLI(sess, payload)
+	return execSSHCLI(sess, dev.Vendor, payload)
 }
 
 // execNetconf 通过 RFC 6242 NETCONF-over-SSH subsystem 下发 <rpc> 载荷。
@@ -92,8 +92,8 @@ func execNetconf(sess *ssh.Session, rpcBody string) (string, error) {
 	return resp, nil
 }
 
-// execSSHCLI 通过交互式命令行向华为 VRP 下发配置。
-func execSSHCLI(sess *ssh.Session, commands string) (string, error) {
+// execSSHCLI 通过交互式命令行向不同厂商设备下发配置。
+func execSSHCLI(sess *ssh.Session, vendor, commands string) (string, error) {
 	var out bytes.Buffer
 	sess.Stdout = &out
 	sess.Stderr = &out
@@ -104,7 +104,12 @@ func execSSHCLI(sess *ssh.Session, commands string) (string, error) {
 	if err := sess.Shell(); err != nil {
 		return "", err
 	}
-	_, _ = io.WriteString(stdin, "screen-length 0 temporary\n"+commands+"\nreturn\nquit\n")
+	switch strings.ToLower(strings.TrimSpace(vendor)) {
+	case "ruijie", "cisco", "arista", "zte":
+		_, _ = io.WriteString(stdin, "terminal length 0\n"+commands+"\nend\nexit\n")
+	default:
+		_, _ = io.WriteString(stdin, "screen-length 0 temporary\n"+commands+"\nreturn\nquit\n")
+	}
 	_ = stdin.Close()
 	_ = sess.Wait()
 	return out.String(), nil

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"hoptrace/internal/biz"
@@ -170,10 +171,25 @@ return
 	if err := sess.Shell(); err != nil {
 		return "", err
 	}
-	_, _ = io.WriteString(stdin, "screen-length 0 temporary\ndisplay current-configuration\nquit\n")
+	_, _ = io.WriteString(stdin, runningConfigCommand(dev.Vendor))
 	_ = stdin.Close()
 	_ = sess.Wait()
 	return out.String(), nil
+}
+
+func runningConfigCommand(vendor string) string {
+	switch strings.ToLower(strings.TrimSpace(vendor)) {
+	case "ruijie", "cisco", "arista", "zte":
+		return "terminal length 0\nshow running-config\nexit\n"
+	case "juniper":
+		return "set cli screen-length 0\nshow configuration\nexit\n"
+	case "fortinet":
+		return "show full-configuration\nexit\n"
+	case "mikrotik":
+		return "/export\nquit\n"
+	default:
+		return "screen-length 0 temporary\ndisplay current-configuration\nquit\n"
+	}
 }
 
 func firstNonEmpty(a, b string) string {

@@ -318,6 +318,15 @@ func (uc *PollUsecase) PollDevice(ctx context.Context, id uint) error {
 
 func applySnapshot(d *Device, s *Snapshot) {
 	fp := Identify(s.Sys.ObjectID, s.Sys.Descr)
+	if fp.Model == "" && s.Model != "" {
+		fp.Model = s.Model
+		if fp.Family == FamilyUnknown {
+			fp.Family = InferFamily(fp.Vendor, fp.Model, s.Sys.Descr)
+		}
+	}
+	if fp.OSVersion == "" && s.OSVersion != "" {
+		fp.OSVersion = s.OSVersion
+	}
 	now := time.Now()
 	d.SysName, d.SysDescr, d.SysOID = s.Sys.Name, s.Sys.Descr, s.Sys.ObjectID
 	d.Vendor, d.Family, d.Model, d.OSVersion = fp.Vendor, fp.Family, fp.Model, fp.OSVersion

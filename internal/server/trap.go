@@ -14,13 +14,16 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
-// 触发局部增量重扫的标准与华为常见 Trap OID
+// 触发局部增量重扫的标准与多厂商常见 Trap OID
 const (
-	oidSnmpTrapOID = "1.3.6.1.6.3.1.1.4.1.0"
-	oidLinkDown    = "1.3.6.1.6.3.1.1.5.3"
-	oidLinkUp      = "1.3.6.1.6.3.1.1.5.4"
-	oidLldpRemChg  = "1.0.8802.1.1.2.0.0.1" // lldpRemTablesChange
-	oidHwMacFlap   = "1.3.6.1.4.1.2011.5.25.42.2.1.7.1"
+	oidSnmpTrapOID     = "1.3.6.1.6.3.1.1.4.1.0"
+	oidLinkDown        = "1.3.6.1.6.3.1.1.5.3"
+	oidLinkUp          = "1.3.6.1.6.3.1.1.5.4"
+	oidLldpRemChg      = "1.0.8802.1.1.2.0.0.1" // lldpRemTablesChange
+	oidHwMacFlap       = "1.3.6.1.4.1.2011.5.25.42.2.1.7.1"
+	oidRuijieMacChange = "1.3.6.1.4.1.4881.1.1.10.2.10.2.0.1"
+	oidCiscoMacChange  = "1.3.6.1.4.1.9.9.215.2.0.1"
+	oidH3CMacChange    = "1.3.6.1.4.1.25506.2.40.2.0.1"
 )
 
 // TrapServer 实现 kratos transport.Server, 监听 SNMP Trap(linkUp/linkDown/LLDP 变更等)
@@ -196,7 +199,7 @@ func extractTrapOID(pkt *gosnmp.SnmpPacket) string {
 
 func shouldTriggerPoll(trapOID string) bool {
 	switch trapOID {
-	case oidLinkDown, oidLinkUp, oidLldpRemChg, oidHwMacFlap:
+	case oidLinkDown, oidLinkUp, oidLldpRemChg, oidHwMacFlap, oidRuijieMacChange, oidCiscoMacChange, oidH3CMacChange:
 		return true
 	default:
 		return strings.HasPrefix(trapOID, oidLinkDown) || strings.HasPrefix(trapOID, oidLinkUp)

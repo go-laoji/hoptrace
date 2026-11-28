@@ -47,14 +47,36 @@ func ValidEndpointIP(ip string) bool {
 	return true
 }
 
-// canonIfName 规范化接口名用于匹配:小写、去空白、展开华为常见缩写(GE/XGE/Eth...)。
+// canonIfName 规范化接口名用于匹配:小写、去空白、展开华为/锐捷/H3C/Cisco常见缩写。
 func canonIfName(s string) string {
 	s = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(s), " ", ""))
 	for _, r := range []struct{ short, long string }{
 		{"xge", "xgigabitethernet"},
+		{"tengigabitethernet", "tengigabitethernet"},
+		{"tengige", "tengigabitethernet"},
+		{"te", "tengigabitethernet"},
+		{"xgigabitethernet", "xgigabitethernet"},
+		{"gigabitethernet", "gigabitethernet"},
 		{"ge", "gigabitethernet"},
+		{"gi", "gigabitethernet"},
+		{"fastethernet", "fastethernet"},
 		{"fe", "fastethernet"},
+		{"fa", "fastethernet"},
+		{"fortygige", "fortygigabitethernet"},
+		{"fo", "fortygigabitethernet"},
+		{"hundredgige", "hundredgigabitethernet"},
+		{"hu", "hundredgigabitethernet"},
+		{"twentyfivegige", "twentyfivegigabitethernet"},
+		{"tw", "twentyfivegigabitethernet"},
 		{"eth-trunk", "eth-trunk"},
+		{"aggregateport", "aggregateport"},
+		{"ag", "aggregateport"},
+		{"port-channel", "port-channel"},
+		{"po", "port-channel"},
+		{"bridge-aggregation", "bridge-aggregation"},
+		{"bagg", "bridge-aggregation"},
+		{"route-aggregation", "route-aggregation"},
+		{"ragg", "route-aggregation"},
 		{"eth", "ethernet"},
 	} {
 		if strings.HasPrefix(s, r.short) && len(s) > len(r.short) && s[len(r.short)] >= '0' && s[len(r.short)] <= '9' {

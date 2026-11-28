@@ -338,6 +338,8 @@ type Snapshot struct {
 	IPs          []string
 	ChassisMAC   string
 	Serial       string
+	Model        string
+	OSVersion    string
 	StackMembers int
 	CPU          int
 	Mem          int

@@ -35,6 +35,92 @@ func TestIdentifyHuawei(t *testing.T) {
 	}
 }
 
+func TestIdentifyMultiVendor(t *testing.T) {
+	cases := []struct {
+		oid, descr     string
+		vendor, family string
+		model, ver     string
+	}{
+		{
+			"1.3.6.1.4.1.4881.1.6.1.1.16",
+			"Linux Ruijie 4.14.76-g4a2d7de97 #1 SMP PREEMPT aarch64",
+			"Ruijie", FamilyRouter, "RG-NBR-N7204-E", "",
+		},
+		{
+			"1.3.6.1.4.1.4881.1.1.10.1.99",
+			"Ruijie RG-NBR-N7204-E(v1.11)",
+			"Ruijie", FamilyRouter, "RG-NBR-N7204-E", "v1.11",
+		},
+		{
+			"1.3.6.1.4.1.8072.3.2.10", // Net-SNMP OID fallback via sysDescr
+			"RG-NBR-N7204-E(v1.11)",
+			"Ruijie", FamilyRouter, "RG-NBR-N7204-E", "v1.11",
+		},
+		{
+			"1.3.6.1.4.1.4881.1.1.10.1.123",
+			"Ruijie Gigabit Ethernet Switch(RG-S5750-24GT/8SFP-P) By Ruijie Networks, RGOS 11.4(1)B2",
+			"Ruijie", FamilySwitch, "RG-S5750-24GT/8SFP-P", "RGOS 11.4(1)B2",
+		},
+		{
+			"1.3.6.1.4.1.25506.1.513",
+			"H3C Comware Platform Software, Software Version 7.1.070, Release 6326P01\nH3C S5130S-28P-EI",
+			"H3C", FamilySwitch, "S5130S-28P-EI", "Version 7.1.070, Release 6326P01",
+		},
+		{
+			"1.3.6.1.4.1.9.1.1745",
+			"Cisco IOS Software, C2960X Software (WS-C2960X-48FPS-L), Version 15.2(4)E7, RELEASE SOFTWARE",
+			"Cisco", FamilySwitch, "WS-C2960X-48FPS-L", "15.2(4)E7",
+		},
+		{
+			"1.3.6.1.4.1.2636.1.1.1.2.63",
+			"Juniper Networks, Inc. ex4300-48p Ethernet Switch, kernel JUNOS 18.4R3, Build date: 2020-01-01",
+			"Juniper", FamilySwitch, "EX4300-48P", "JUNOS 18.4R3",
+		},
+		{
+			"1.3.6.1.4.1.12356.101.1.1000",
+			"FortiGate-100F v7.2.4,build1396",
+			"Fortinet", FamilyFirewall, "FortiGate-100F", "v7.2.4,build1396",
+		},
+		{
+			"1.3.6.1.4.1.14988.1",
+			"RouterOS 7.11.2 (CCR1036-12G-4S)",
+			"MikroTik", FamilyRouter, "CCR1036-12G-4S", "RouterOS 7.11.2",
+		},
+		{
+			"1.3.6.1.4.1.30065.1.3011.7050",
+			"Arista Networks EOS version 4.28.3M running on an Arista Networks DCS-7050SX3-48YC8",
+			"Arista", FamilySwitch, "DCS-7050SX3-48YC8", "EOS 4.28.3M",
+		},
+		{
+			"1.3.6.1.4.1.3902.3.100",
+			"ZXR10 5950-52TM ZROS V3.00.11",
+			"ZTE", FamilySwitch, "ZXR10 5950-52TM", "V3.00.11",
+		},
+	}
+	for _, tc := range cases {
+		fp := Identify(tc.oid, tc.descr)
+		if fp.Vendor != tc.vendor || fp.Family != tc.family || fp.Model != tc.model || fp.OSVersion != tc.ver {
+			t.Errorf("Identify(%s, %q) = %+v, want %s/%s/%s/%s", tc.oid, tc.descr, fp, tc.vendor, tc.family, tc.model, tc.ver)
+		}
+	}
+}
+
+func TestCanonIfNameMultiVendor(t *testing.T) {
+	pairs := [][2]string{
+		{"Gi0/1", "GigabitEthernet 0/1"},
+		{"GE0/0/1", "GigabitEthernet0/0/1"},
+		{"Te1/0/1", "TenGigabitEthernet 1/0/1"},
+		{"Ag1", "AggregatePort 1"},
+		{"Po10", "Port-channel10"},
+		{"BAGG2", "Bridge-Aggregation2"},
+	}
+	for _, p := range pairs {
+		if gotA, gotB := canonIfName(p[0]), canonIfName(p[1]); gotA != gotB {
+			t.Errorf("canonIfName(%q)=%q != canonIfName(%q)=%q", p[0], gotA, p[1], gotB)
+		}
+	}
+}
+
 func TestBuildTopologyLAGAndConfidence(t *testing.T) {
 	now := time.Now()
 	devs := []*Device{

@@ -1,5 +1,5 @@
-// hoptrace-walk: 独立的纯 Go SNMP 数据导出工具(无 Net-SNMP 依赖,支持 SNMPv3 AES192/AES192C/AES256/AES256C)。
-// 输出标准 `snmpwalk -On` 兼容格式,可直接用于 HopTrace 离线回放与华为 MIB 校准(Issue #13)。
+// hoptrace-walk: 独立的纯 Go SNMP 数据导出工具(无 Net-SNMP 依赖,支持 SNMPv2c/v3 及多品牌私有 MIB 自动探测)。
+// 输出标准 `snmpwalk -On` 兼容格式,可直接用于 HopTrace 离线回放与多厂商 MIB 校准。
 package main
 
 import (
@@ -24,7 +24,7 @@ type walkTree struct {
 	oid  string
 }
 
-var defaultTrees = []walkTree{
+var standardTrees = []walkTree{
 	{"SNMPv2-MIB system", "1.3.6.1.2.1.1"},
 	{"IF-MIB ifTable", "1.3.6.1.2.1.2.2"},
 	{"IF-MIB ifXTable", "1.3.6.1.2.1.31.1.1"},
@@ -36,28 +36,66 @@ var defaultTrees = []walkTree{
 	{"BRIDGE-MIB FDB (dot1dTpFdb)", "1.3.6.1.2.1.17.4.3"},
 	{"Q-BRIDGE-MIB FDB (dot1qTpFdb)", "1.3.6.1.2.1.17.7.1.2.2"},
 	{"Q-BRIDGE-MIB PVID (dot1qPvid)", "1.3.6.1.2.1.17.7.1.4.5.1.1"},
-	{"Huawei L2MAM FDB (hwDynFdbPort)", "1.3.6.1.4.1.2011.5.25.42.2.1.3.1.4"},
 	{"LLDP-MIB local", "1.0.8802.1.1.2.1.3"},
 	{"LLDP-MIB remote", "1.0.8802.1.1.2.1.4"},
-	{"ENTITY-MIB class", "1.3.6.1.2.1.47.1.1.1.1.5"},
-	{"ENTITY-MIB serial", "1.3.6.1.2.1.47.1.1.1.1.11"},
-	{"Huawei ENTITY CPU", "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5"},
-	{"Huawei ENTITY Mem", "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7"},
-	{"Huawei ENTITY Temp", "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11"},
-	{"Huawei Trunk/LAG (hwTrunk)", "1.3.6.1.4.1.2011.5.25.41"},
-	{"Huawei NDP/NTDP (hgmp)", "1.3.6.1.4.1.2011.6.7"},
+	{"ENTITY-MIB physical", "1.3.6.1.2.1.47.1.1.1.1"},
+	{"ENTITY-SENSOR-MIB", "1.3.6.1.2.1.99.1.1.1"},
+	{"HOST-RESOURCES storage", "1.3.6.1.2.1.25.2.3.1"},
+	{"HOST-RESOURCES processor", "1.3.6.1.2.1.25.3.3.1.2"},
+	{"UCD-SNMP memory", "1.3.6.1.4.1.2021.4"},
+	{"UCD-SNMP systemStats", "1.3.6.1.4.1.2021.11"},
+}
+
+var vendorTrees = map[string][]walkTree{
+	"Huawei": {
+		{"Huawei L2MAM FDB (hwDynFdbPort)", "1.3.6.1.4.1.2011.5.25.42.2.1.3.1.4"},
+		{"Huawei ENTITY CPU", "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5"},
+		{"Huawei ENTITY Mem", "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7"},
+		{"Huawei ENTITY Temp", "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11"},
+		{"Huawei Trunk/LAG (hwTrunk)", "1.3.6.1.4.1.2011.5.25.41"},
+	},
+	"Ruijie": {
+		{"Ruijie System MIB", "1.3.6.1.4.1.4881.1.1.10.2.1"},
+		{"Ruijie Entity MIB", "1.3.6.1.4.1.4881.1.1.10.2.21"},
+		{"Ruijie Memory MIB", "1.3.6.1.4.1.4881.1.1.10.2.35"},
+		{"Ruijie CPU MIB", "1.3.6.1.4.1.4881.1.1.10.2.36"},
+		{"Ruijie NBR/NTOS MIB", "1.3.6.1.4.1.4881.1.6.1.2"},
+	},
+	"H3C": {
+		{"H3C Entity Ext MIB", "1.3.6.1.4.1.25506.2.6.1.1.1.1"},
+	},
+	"Cisco": {
+		{"Cisco Process CPU", "1.3.6.1.4.1.9.9.109.1.1.1.1"},
+		{"Cisco Memory Pool", "1.3.6.1.4.1.9.9.48.1.1.1"},
+		{"Cisco EnvMon Temp", "1.3.6.1.4.1.9.9.13.1.3.1.3"},
+	},
+	"Juniper": {
+		{"Juniper Operating", "1.3.6.1.4.1.2636.3.1.13.1"},
+		{"Juniper Box Serial", "1.3.6.1.4.1.2636.3.1.3"},
+	},
+	"Fortinet": {
+		{"Fortinet System", "1.3.6.1.4.1.12356.100.1"},
+		{"Fortinet Stats", "1.3.6.1.4.1.12356.101.4.1"},
+	},
+	"MikroTik": {
+		{"MikroTik Health/Lic", "1.3.6.1.4.1.14988.1.1"},
+	},
+	"ZTE": {
+		{"ZTE System", "1.3.6.1.4.1.3902.3.1.1.1.1"},
+	},
 }
 
 func main() {
 	host := flag.String("h", "", "目标设备 IP (必填)")
 	port := flag.Int("p", 161, "SNMP 端口")
-	ver := flag.String("v", "3", "SNMP 版本: v2c / v3 (或 2c / 3)")
+	ver := flag.String("v", "2c", "SNMP 版本: v2c / v3 (或 2c / 3)")
 	comm := flag.String("c", "public", "SNMP v2c 只读团体字")
 	user := flag.String("u", "", "SNMP v3 用户名")
 	authProto := flag.String("a", "SHA", "SNMP v3 认证算法: MD5/SHA/SHA224/SHA256/SHA384/SHA512/NONE")
 	authPass := flag.String("A", "", "SNMP v3 认证密码")
 	privProto := flag.String("x", "AES192", "SNMP v3 加密算法: DES/AES/AES192/AES192C/AES256/AES256C/NONE")
 	privPass := flag.String("X", "", "SNMP v3 加密密码")
+	extraOIDs := flag.String("extra-oid", "", "额外抓取的私有 OID 子树(逗号分隔, 例如 1.3.6.1.4.1.4881)")
 	outFile := flag.String("o", "device.walk", "输出文件路径")
 	timeout := flag.Duration("timeout", 5*time.Second, "单次 SNMP 请求超时")
 	retries := flag.Int("retries", 2, "重试次数")
@@ -65,7 +103,7 @@ func main() {
 	flag.Parse()
 
 	if strings.TrimSpace(*host) == "" {
-		fmt.Fprintf(os.Stderr, "用法: %s -h <IP> [-v 2c|3] [-c community] [-u user -a SHA -A auth -x AES192 -X priv] [-o out.walk]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "用法: %s -h <IP> [-v 2c|3] [-c community] [-u user -a SHA -A auth -x AES192 -X priv] [-extra-oid oid1,oid2] [-o out.walk]\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -101,6 +139,36 @@ func main() {
 	}
 	defer sess.Close()
 
+	// 先探测 sysDescr / sysObjectID 以自动识别厂商并追加私有 MIB 树
+	trees := append([]walkTree(nil), standardTrees...)
+	var detectedVendor string
+	if pdus, err := sess.Get(ctx, []string{"1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.2.0"}); err == nil {
+		var sysDescr, sysOID string
+		for _, p := range pdus {
+			switch p.OID {
+			case "1.3.6.1.2.1.1.1.0":
+				sysDescr = fmt.Sprintf("%s", p.Value)
+			case "1.3.6.1.2.1.1.2.0":
+				sysOID = strings.TrimPrefix(fmt.Sprintf("%v", p.Value), ".")
+			}
+		}
+		fp := biz.Identify(sysOID, sysDescr)
+		detectedVendor = fp.Vendor
+		fmt.Fprintf(os.Stderr, "[INFO] 识别结果: vendor=%s family=%s model=%s version=%s sysOID=%s\n",
+			fp.Vendor, fp.Family, fp.Model, fp.OSVersion, sysOID)
+		if vt, ok := vendorTrees[fp.Vendor]; ok {
+			trees = append(trees, vt...)
+		}
+	}
+	if strings.TrimSpace(*extraOIDs) != "" {
+		for _, raw := range strings.Split(*extraOIDs, ",") {
+			oid := strings.TrimPrefix(strings.TrimSpace(raw), ".")
+			if oid != "" {
+				trees = append(trees, walkTree{name: "Extra " + oid, oid: oid})
+			}
+		}
+	}
+
 	f, err := os.Create(*outFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "创建输出文件失败: %v\n", err)
@@ -109,10 +177,10 @@ func main() {
 	defer f.Close()
 	w := bufio.NewWriter(f)
 
-	fmt.Fprintf(w, "# hoptrace-walk host=%s version=%s time=%s\n", *host, version, time.Now().Format(time.RFC3339))
+	fmt.Fprintf(w, "# hoptrace-walk host=%s version=%s vendor=%s time=%s\n", *host, version, detectedVendor, time.Now().Format(time.RFC3339))
 
 	total := 0
-	for _, tree := range defaultTrees {
+	for _, tree := range trees {
 		t0 := time.Now()
 		pdus, err := sess.Walk(ctx, tree.oid)
 		dur := time.Since(t0).Round(time.Millisecond)
@@ -186,7 +254,6 @@ func isPrintableASCII(b []byte) bool {
 	if len(b) == 0 {
 		return true
 	}
-	// 6 字节常见为 MAC 地址, 若含控制字符或非 ASCII 则输出 Hex-STRING
 	if len(b) == 6 {
 		for _, c := range b {
 			if c < 0x20 || c > 0x7e {

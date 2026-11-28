@@ -125,13 +125,25 @@ func (s *goSNMPSession) Walk(ctx context.Context, rootOID string) ([]PDU, error)
 	s.g.Context = ctx
 	root := strings.TrimPrefix(rootOID, ".")
 	var out []PDU
-	err := s.g.BulkWalk(root, func(v gosnmp.SnmpPDU) error {
+	collectFn := func(v gosnmp.SnmpPDU) error {
 		if v.Type == gosnmp.NoSuchObject || v.Type == gosnmp.NoSuchInstance || v.Type == gosnmp.EndOfMibView {
 			return nil
 		}
 		out = append(out, PDU{OID: strings.TrimPrefix(v.Name, "."), Type: v.Type, Value: v.Value})
 		return nil
-	})
+	}
+	if s.g.Version == gosnmp.Version1 {
+		err := s.g.Walk(root, collectFn)
+		return out, err
+	}
+	err := s.g.BulkWalk(root, collectFn)
+	// 部分 SMB 路由器/网关(如部分锐捷/TP-Link/老旧设备)对 GetBulk 兼容不佳, 自动降级为标准 GetNext Walk
+	if err != nil && len(out) == 0 && ctx.Err() == nil {
+		out = nil
+		if nextErr := s.g.Walk(root, collectFn); nextErr == nil {
+			return out, nil
+		}
+	}
 	return out, err
 }
 

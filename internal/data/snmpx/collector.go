@@ -43,9 +43,10 @@ func (c *Collector) Collect(ctx context.Context, t biz.Target) (*biz.Snapshot, e
 		return nil, err
 	}
 	snap := &biz.Snapshot{Sys: *sys}
+	drv := matchDriver(*sys)
 
 	// 1. 接口 + LAG
-	ifs, warn := readInterfaces(ctx, sess)
+	ifs, warn := readInterfaces(ctx, sess, drv)
 	snap.Interfaces = ifs
 	snap.Warnings = append(snap.Warnings, warn...)
 
@@ -63,8 +64,8 @@ func (c *Collector) Collect(ctx context.Context, t biz.Target) (*biz.Snapshot, e
 		sort.Strings(snap.IPs)
 	}
 
-	// 3. 底盘 MAC (优先 lldpLocChassisId, 兜底 dot1dBaseBridgeAddress)
-	snap.ChassisMAC = readChassisMAC(ctx, sess)
+	// 3. 底盘 MAC (优先 lldpLocChassisId, 兜底 dot1dBaseBridgeAddress, 再兜底物理口 MAC)
+	snap.ChassisMAC = readChassisMAC(ctx, sess, ifs)
 
 	// 4. LLDP 邻居
 	nbs, warn := readLLDP(ctx, sess, ifs)
@@ -72,7 +73,7 @@ func (c *Collector) Collect(ctx context.Context, t biz.Target) (*biz.Snapshot, e
 	snap.Warnings = append(snap.Warnings, warn...)
 
 	// 5. FDB (MAC 地址表)
-	fdb, warn := readFDB(ctx, sess)
+	fdb, warn := readFDB(ctx, sess, drv)
 	snap.Fdb = fdb
 	snap.Warnings = append(snap.Warnings, warn...)
 
@@ -81,14 +82,32 @@ func (c *Collector) Collect(ctx context.Context, t biz.Target) (*biz.Snapshot, e
 	snap.Arp = arp
 	snap.Warnings = append(snap.Warnings, warn...)
 
-	// 7. 物理实体(序列号 / 堆叠成员数)
-	snap.Serial, snap.StackMembers = readEntity(ctx, sess)
+	// 7. 物理实体(序列号 / 型号 / 版本 / 堆叠成员数)
+	ent := readEntity(ctx, sess, drv)
+	snap.Serial = ent.Serial
+	snap.Model = ent.Model
+	snap.OSVersion = ent.OSVersion
+	snap.StackMembers = ent.StackMembers
 
-	// 8. 华为硬件健康与无线 AC STA 表(尽力而为)
-	if strings.HasPrefix(sys.ObjectID, "1.3.6.1.4.1.2011") {
-		snap.CPU, snap.Mem, snap.Temp = readHuaweiHealth(ctx, sess)
-		snap.Wireless = readHuaweiWirelessSTAs(ctx, sess)
+	// 8. 硬件健康(厂商私有 MIB 优先, 缺失项由 HOST-RESOURCES / UCD-SNMP / ENTITY-SENSOR 通用兜底)
+	var cpu, mem, temp int
+	if drv != nil {
+		cpu, mem, temp = drv.ReadHealth(ctx, sess)
+		snap.Wireless = drv.ReadWirelessSTAs(ctx, sess)
 	}
+	if cpu == 0 || mem == 0 || temp == 0 {
+		gCPU, gMem, gTemp := readGenericHealth(ctx, sess, cpu == 0, mem == 0, temp == 0)
+		if cpu == 0 {
+			cpu = gCPU
+		}
+		if mem == 0 {
+			mem = gMem
+		}
+		if temp == 0 {
+			temp = gTemp
+		}
+	}
+	snap.CPU, snap.Mem, snap.Temp = cpu, mem, temp
 
 	return snap, nil
 }
@@ -119,7 +138,7 @@ func readSysInfo(ctx context.Context, sess Session) (*biz.SysInfo, error) {
 	return info, nil
 }
 
-func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []string) {
+func readInterfaces(ctx context.Context, sess Session, drv VendorDriver) ([]*biz.Interface, []string) {
 	var warns []string
 	byIdx := map[int]*biz.Interface{}
 	get := func(idx int) *biz.Interface {
@@ -169,7 +188,7 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 	walkCol(oidIfOperStatus, func(idx int, p PDU) { get(idx).OperStatus = ifStatusStr(pduInt64(p)) })
 	walkCol(oidIfHCInOctets, func(idx int, p PDU) { get(idx).InOctets = uint64(pduInt64(p)) })
 	walkCol(oidIfHCOutOctets, func(idx int, p PDU) { get(idx).OutOctets = uint64(pduInt64(p)) })
-	// 兜底 32 位计数器(部分老款百兆接入口可能不报 ifHC*Octets)
+	// 兜底 32 位计数器(部分老款百兆口或轻量网关不报 ifHC*Octets)
 	walkCol(oidIfInOctets, func(idx int, p PDU) {
 		if get(idx).InOctets == 0 {
 			get(idx).InOctets = uint64(pduInt64(p))
@@ -183,7 +202,7 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 	walkCol(oidIfInErrors, func(idx int, p PDU) { get(idx).InErrors = pduInt64(p) })
 	walkCol(oidIfOutErrors, func(idx int, p PDU) { get(idx).OutErrors = pduInt64(p) })
 
-	// LAG 成员关系: 优先标准 IEEE8023-LAG, 兜底华为 HUAWEI-IF-EXT-MIB (hwTrunk)
+	// LAG 成员关系: 优先标准 IEEE8023-LAG, 兜底厂商私有 MIB (如华为 hwTrunk)
 	lagMapped := 0
 	if pdus, err := sess.Walk(ctx, oidDot3adAggPortAttached); err == nil {
 		for _, p := range pdus {
@@ -200,33 +219,11 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 			}
 		}
 	}
-	if lagMapped == 0 {
-		trunkIf := map[int]int{}
-		if pdus, err := sess.Walk(ctx, oidHwTrunkIfIndex); err == nil {
-			for _, p := range pdus {
-				tIdx, err := strconv.Atoi(suffix(p.OID, oidHwTrunkIfIndex))
-				if err == nil {
-					trunkIf[tIdx] = int(pduInt64(p))
-				}
-			}
-		}
-		if len(trunkIf) > 0 {
-			if pdus, err := sess.Walk(ctx, oidHwTrunkMemStatus); err == nil {
-				for _, p := range pdus {
-					parts := strings.Split(suffix(p.OID, oidHwTrunkMemStatus), ".")
-					if len(parts) != 2 {
-						continue
-					}
-					tIdx, err1 := strconv.Atoi(parts[0])
-					memIf, err2 := strconv.Atoi(parts[1])
-					if err1 != nil || err2 != nil {
-						continue
-					}
-					if agg := trunkIf[tIdx]; agg > 0 && agg != memIf {
-						if it := byIdx[memIf]; it != nil {
-							it.AggIfIndex = agg
-						}
-					}
+	if lagMapped == 0 && drv != nil {
+		for memIf, agg := range drv.ReadLAGMembers(ctx, sess) {
+			if agg > 0 && agg != memIf {
+				if it := byIdx[memIf]; it != nil {
+					it.AggIfIndex = agg
 				}
 			}
 		}
@@ -234,15 +231,14 @@ func readInterfaces(ctx context.Context, sess Session) ([]*biz.Interface, []stri
 
 	var out []*biz.Interface
 	for _, it := range byIdx {
-		if !keepInterface(it) {
-			continue
-		}
 		if it.Name == "" {
 			it.Name = it.Descr
 		}
-		// 华为 VRP 5 的 Eth-Trunk 上报 ifType=6, 统一规范为 161 (ieee8023adLag)
-		if strings.HasPrefix(strings.ToLower(it.Name), "eth-trunk") {
-			it.IfType = 161
+		if drv != nil {
+			drv.NormalizeInterface(it)
+		}
+		if !keepInterface(it) {
+			continue
 		}
 		out = append(out, it)
 	}
@@ -257,11 +253,21 @@ func keepInterface(it *biz.Interface) bool {
 	default:
 		return false
 	}
-	name := strings.ToLower(it.Name + " " + it.Descr)
-	for _, skip := range []string{"null", "loopback", "vlanif", "meth", "console", "inloopback", "virtual", "tunnel"} {
+	name := strings.ToLower(strings.TrimSpace(it.Name + " " + it.Descr))
+	for _, skip := range []string{
+		"null", "loopback", "vlanif", "meth", "console", "inloopback",
+		"virtual", "tunnel", "dialer", "pppoe", "erspan", "docker", "veth",
+		"ifb", "sit0", "br-lan", "bvi",
+	} {
 		if strings.Contains(name, skip) {
 			return false
 		}
+	}
+	// 跳过纯 SVI/VLAN 三层接口 (如 "Vlan10" / "VLAN 10") 及 GRE 隧道口 (避免误伤 AggregatePort/Bridge-Aggregation)
+	short := strings.ToLower(strings.TrimSpace(it.Name))
+	if (strings.HasPrefix(short, "vlan") && !strings.Contains(short, "eth")) ||
+		strings.HasPrefix(short, "gre") {
+		return false
 	}
 	return true
 }
@@ -270,26 +276,30 @@ func ifStatusStr(v int64) string {
 	switch v {
 	case 1:
 		return "up"
-	case 2:
+	case 2, 6, 7: // down(2), notPresent(6), lowerLayerDown(7)
 		return "down"
 	default:
 		return "unknown"
 	}
 }
 
-func readChassisMAC(ctx context.Context, sess Session) string {
-	pdus, err := sess.Get(ctx, []string{oidLldpLocChassisID, oidDot1dBaseBridgeAddr})
-	if err != nil {
-		return ""
-	}
-	for _, p := range pdus {
-		if b := pduBytes(p); len(b) == 6 {
-			if m := biz.FormatMAC(b); m != "" && m != "00:00:00:00:00:00" {
+func readChassisMAC(ctx context.Context, sess Session, ifs []*biz.Interface) string {
+	if pdus, err := sess.Get(ctx, []string{oidLldpLocChassisID, oidDot1dBaseBridgeAddr}); err == nil {
+		for _, p := range pdus {
+			if b := pduBytes(p); len(b) == 6 {
+				if m := biz.FormatMAC(b); m != "" && m != "00:00:00:00:00:00" {
+					return m
+				}
+			}
+			if m := biz.NormalizeMAC(pduString(p)); m != "" && m != "00:00:00:00:00:00" {
 				return m
 			}
 		}
-		if m := biz.NormalizeMAC(pduString(p)); m != "" {
-			return m
+	}
+	// 兜底: 纯三层路由器/网关(如 RG-NBR)未开启 LLDP/Bridge 时, 取最小索引物理口的 MAC
+	for _, it := range ifs {
+		if biz.ValidEndpointMAC(it.MAC) {
+			return it.MAC
 		}
 	}
 	return ""
@@ -297,14 +307,19 @@ func readChassisMAC(ctx context.Context, sess Session) string {
 
 func readLLDP(ctx context.Context, sess Session, ifs []*biz.Interface) ([]*biz.Neighbor, []string) {
 	var warns []string
-	// 本地 portNum -> ifIndex 映射(通过 lldpLocPortId / lldpLocPortDesc 匹配接口名)
+	// 本地 portNum -> ifIndex 映射(通过 lldpLocPortId / lldpLocPortDesc 匹配接口名, 忽略大小写和空格)
+	norm := func(s string) string {
+		return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(s), " ", ""))
+	}
 	ifByName := map[string]int{}
 	ifByIdx := map[int]bool{}
 	for _, it := range ifs {
 		ifByIdx[it.IfIndex] = true
-		ifByName[strings.ToLower(it.Name)] = it.IfIndex
+		if it.Name != "" {
+			ifByName[norm(it.Name)] = it.IfIndex
+		}
 		if it.Descr != "" {
-			ifByName[strings.ToLower(it.Descr)] = it.IfIndex
+			ifByName[norm(it.Descr)] = it.IfIndex
 		}
 	}
 	locPortToIf := map[int]int{}
@@ -321,8 +336,7 @@ func readLLDP(ctx context.Context, sess Session, ifs []*biz.Interface) ([]*biz.N
 			if _, ok := locPortToIf[pnum]; ok {
 				continue
 			}
-			name := strings.ToLower(pduString(p))
-			if idx, ok := ifByName[name]; ok {
+			if idx, ok := ifByName[norm(pduString(p))]; ok {
 				locPortToIf[pnum] = idx
 			}
 		}
@@ -436,7 +450,7 @@ func readLLDP(ctx context.Context, sess Session, ifs []*biz.Interface) ([]*biz.N
 	return out, warns
 }
 
-func readFDB(ctx context.Context, sess Session) ([]biz.FdbEntry, []string) {
+func readFDB(ctx context.Context, sess Session, drv VendorDriver) ([]biz.FdbEntry, []string) {
 	var warns []string
 	// dot1dBasePort -> ifIndex
 	portToIf := map[int]int{}
@@ -449,7 +463,7 @@ func readFDB(ctx context.Context, sess Session) ([]biz.FdbEntry, []string) {
 		}
 	}
 
-	// 优先 Q-BRIDGE-MIB (带 VLAN): 索引 vlan.m1.m2.m3.m4.m5.m6
+	// 优先 1: Q-BRIDGE-MIB (带 VLAN): 索引 vlan.m1.m2.m3.m4.m5.m6
 	qPorts, err := sess.Walk(ctx, oidDot1qTpFdbPort)
 	if err == nil && len(qPorts) > 0 {
 		status := map[string]int{}
@@ -489,27 +503,10 @@ func readFDB(ctx context.Context, sess Session) ([]biz.FdbEntry, []string) {
 		return out, warns
 	}
 
-	// 优先 2: 华为私有 HUAWEI-L2MAM-MIB (hwDynFdbPort, 常见索引 m1.m2.m3.m4.m5.m6.vlan.vsi -> ifIndex)
-	if hwPorts, err := sess.Walk(ctx, oidHwDynFdbPort); err == nil && len(hwPorts) > 0 {
-		var out []biz.FdbEntry
-		for _, p := range hwPorts {
-			parts := strings.Split(suffix(p.OID, oidHwDynFdbPort), ".")
-			if len(parts) < 7 {
-				continue
-			}
-			mac := oidPartsToMAC(parts[0:6])
-			vlan, err := strconv.Atoi(parts[6])
-			if !biz.ValidEndpointMAC(mac) || err != nil || vlan <= 0 || vlan > 4094 {
-				continue
-			}
-			ifIdx := int(pduInt64(p))
-			if ifIdx <= 0 {
-				continue
-			}
-			out = append(out, biz.FdbEntry{MAC: mac, VLAN: vlan, IfIndex: ifIdx})
-		}
-		if len(out) > 0 {
-			return out, warns
+	// 优先 2: 厂商私有带 VLAN FDB (如华为 HUAWEI-L2MAM-MIB)
+	if drv != nil {
+		if priv := drv.ReadPrivateFDB(ctx, sess); len(priv) > 0 {
+			return priv, warns
 		}
 	}
 
@@ -618,87 +615,62 @@ func readARP(ctx context.Context, sess Session) ([]biz.ArpEntry, []string) {
 	return out, warns
 }
 
-func readEntity(ctx context.Context, sess Session) (serial string, stackMembers int) {
+func readEntity(ctx context.Context, sess Session, drv VendorDriver) EntityExtra {
+	var ent EntityExtra
+	chassisIdx := map[string]bool{}
 	if pdus, err := sess.Walk(ctx, oidEntPhysicalClass); err == nil {
 		for _, p := range pdus {
 			if pduInt64(p) == 3 { // chassis(3)
-				stackMembers++
+				ent.StackMembers++
+				chassisIdx[suffix(p.OID, oidEntPhysicalClass)] = true
 			}
 		}
 	}
-	if pdus, err := sess.Walk(ctx, oidEntPhysicalSerialNum); err == nil {
-		for _, p := range pdus {
-			if s := pduString(p); s != "" {
-				serial = s
-				break
-			}
-		}
-	}
-	if stackMembers == 0 {
-		stackMembers = 1
-	}
-	return serial, stackMembers
-}
 
-func readHuaweiHealth(ctx context.Context, sess Session) (cpu, mem, temp int) {
-	maxVal := func(oid string, lo, hi int) int {
+	pickEntityStr := func(oid string) string {
 		pdus, err := sess.Walk(ctx, oid)
 		if err != nil {
-			return 0
+			return ""
 		}
-		best := 0
+		var fallback string
 		for _, p := range pdus {
-			v := int(pduInt64(p))
-			if v >= lo && v <= hi && v > best {
-				best = v
-			}
-		}
-		return best
-	}
-	return maxVal(oidHwEntityCPUUsage, 1, 100), maxVal(oidHwEntityMemUsage, 1, 100), maxVal(oidHwEntityTemperature, 1, 120)
-}
-
-func readHuaweiWirelessSTAs(ctx context.Context, sess Session) []biz.WirelessSTA {
-	byMAC := map[string]*biz.WirelessSTA{}
-	get := func(mac string) *biz.WirelessSTA {
-		s := byMAC[mac]
-		if s == nil {
-			s = &biz.WirelessSTA{MAC: mac, VLAN: 1}
-			byMAC[mac] = s
-		}
-		return s
-	}
-	walkSTA := func(oid string, fn func(s *biz.WirelessSTA, p PDU)) {
-		pdus, err := sess.Walk(ctx, oid)
-		if err != nil {
-			return
-		}
-		for _, p := range pdus {
-			parts := strings.Split(suffix(p.OID, oid), ".")
-			if len(parts) < 6 {
+			s := pduString(p)
+			if s == "" {
 				continue
 			}
-			mac := oidPartsToMAC(parts[len(parts)-6:])
-			if !biz.ValidEndpointMAC(mac) {
-				continue
+			if chassisIdx[suffix(p.OID, oid)] {
+				return s
 			}
-			fn(get(mac), p)
+			if fallback == "" {
+				fallback = s
+			}
+		}
+		return fallback
+	}
+
+	ent.Serial = pickEntityStr(oidEntPhysicalSerialNum)
+	ent.Model = pickEntityStr(oidEntPhysicalModelName)
+	ent.OSVersion = pickEntityStr(oidEntPhysicalSoftwareRev)
+
+	if drv != nil {
+		extra := drv.ReadEntityExtra(ctx, sess)
+		if ent.Serial == "" {
+			ent.Serial = extra.Serial
+		}
+		if ent.Model == "" {
+			ent.Model = extra.Model
+		}
+		if ent.OSVersion == "" {
+			ent.OSVersion = extra.OSVersion
+		}
+		if ent.StackMembers == 0 && extra.StackMembers > 0 {
+			ent.StackMembers = extra.StackMembers
 		}
 	}
-	walkSTA(oidHwWlanStaAPName, func(s *biz.WirelessSTA, p PDU) { s.APName = pduString(p) })
-	walkSTA(oidHwWlanStaSSID, func(s *biz.WirelessSTA, p PDU) { s.SSID = pduString(p) })
-	walkSTA(oidHwWlanStaVLAN, func(s *biz.WirelessSTA, p PDU) { s.VLAN = int(pduInt64(p)) })
-	walkSTA(oidHwWlanStaIP, func(s *biz.WirelessSTA, p PDU) { s.IP = pduString(p) })
-	walkSTA(oidHwWlanStaRSSI, func(s *biz.WirelessSTA, p PDU) { s.RSSI = int(pduInt64(p)) })
-
-	if len(byMAC) == 0 {
-		return nil
+	if ent.StackMembers == 0 {
+		ent.StackMembers = 1
 	}
-	out := make([]biz.WirelessSTA, 0, len(byMAC))
-	for _, s := range byMAC {
-		out = append(out, *s)
-	}
-	return out
+	return ent
 }
 
 func suffix(oid, base string) string {
