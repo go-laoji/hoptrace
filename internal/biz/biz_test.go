@@ -290,3 +290,96 @@ func TestClassifyPCLLDPAsStation(t *testing.T) {
 		t.Errorf("Huawei switch should be NeighborNetwork, got %d", cls)
 	}
 }
+
+func TestBuildTopologyL3ARPAndFDBInference(t *testing.T) {
+	t.Run("RouterARPWithCoreFDB", func(t *testing.T) {
+		// 模拟 172.16.35.252 (锐捷 RG-NBR, 无 LLDP、无 FDB) 直连核心交换机 hx-01 (192.168.140.254)
+		devs := []*Device{
+			{ID: 1, Name: "hx-01", Managed: true, Family: FamilySwitch, MgmtIP: "192.168.140.254", IPs: []string{"172.16.35.254"}, ChassisMAC: "fc:e3:3c:ad:0b:a1"},
+			{ID: 2, Name: "172.16.35.252", Managed: true, Family: FamilyRouter, MgmtIP: "172.16.35.252", ChassisMAC: "4c:49:68:48:20:f5"},
+		}
+		ifs := []*Interface{
+			{DeviceID: 1, IfIndex: 24, Name: "GE1/0/24", IfType: 6, OperStatus: "up"},
+			{DeviceID: 2, IfIndex: 19, Name: "Ge0/7", IfType: 117, OperStatus: "up", MAC: "4c:49:68:48:20:fc"},
+		}
+		fdb := []FdbEntry{
+			{DeviceID: 1, IfIndex: 24, MAC: "4c:49:68:48:20:fc", VLAN: 35},
+		}
+		arp := []ArpEntry{
+			{DeviceID: 2, IfIndex: 19, IP: "172.16.35.254", MAC: "fc:e3:3c:ad:0b:a1"},
+		}
+
+		res := BuildTopology(TopoInput{Devices: devs, Interfaces: ifs, Fdb: fdb, Arp: arp, Now: time.Now()})
+		if len(res.Links) != 1 {
+			t.Fatalf("expected 1 ARP+FDB link, got %d: %+v", len(res.Links), res.Links)
+		}
+		l := res.Links[0]
+		if l.Kind != "arp" || l.Confidence != 0.6 || l.AIfName != "GE1/0/24" || l.BIfName != "Ge0/7" {
+			t.Fatalf("unexpected link: %+v", l)
+		}
+		if res.IfInfos[IfKey{1, 24}].Kind != IfKindUplink || res.IfInfos[IfKey{2, 19}].Kind != IfKindUplink {
+			t.Fatalf("both ports should be marked uplink: %+v", res.IfInfos)
+		}
+	})
+
+	t.Run("RouterBehindAccessSwitchNoFalseShortcut", func(t *testing.T) {
+		// R(3) -- Acc(2) -- Core(1), 其中 Acc--Core 已有 LLDP 链路; R 的 ARP 指向 Core, 应连到 Acc 而非跨跳连 Core
+		devs := []*Device{
+			{ID: 1, Name: "hx-01", Managed: true, Family: FamilySwitch, IPs: []string{"172.16.35.254"}, ChassisMAC: "fc:e3:3c:ad:0b:a1"},
+			{ID: 2, Name: "acc-01", Managed: true, Family: FamilySwitch, ChassisMAC: "00:00:00:00:00:02"},
+			{ID: 3, Name: "nbr-01", Managed: true, Family: FamilyRouter, ChassisMAC: "4c:49:68:48:20:fc"},
+		}
+		ifs := []*Interface{
+			{DeviceID: 1, IfIndex: 1, Name: "GE1/0/1", IfType: 6, OperStatus: "up"},
+			{DeviceID: 2, IfIndex: 24, Name: "GE0/0/24", IfType: 6, OperStatus: "up"},
+			{DeviceID: 2, IfIndex: 5, Name: "GE0/0/5", IfType: 6, OperStatus: "up"},
+			{DeviceID: 3, IfIndex: 19, Name: "Ge0/7", IfType: 117, OperStatus: "up", MAC: "4c:49:68:48:20:fc"},
+		}
+		nbs := []*Neighbor{
+			{DeviceID: 1, LocalIfIndex: 1, RemChassisID: "00:00:00:00:00:02", RemPortID: "GE0/0/24", RemCaps: capBridge},
+			{DeviceID: 2, LocalIfIndex: 24, RemChassisID: "fc:e3:3c:ad:0b:a1", RemPortID: "GE1/0/1", RemCaps: capBridge},
+		}
+		fdb := []FdbEntry{
+			{DeviceID: 1, IfIndex: 1, MAC: "4c:49:68:48:20:fc", VLAN: 35},
+			{DeviceID: 2, IfIndex: 5, MAC: "4c:49:68:48:20:fc", VLAN: 35},
+		}
+		arp := []ArpEntry{
+			{DeviceID: 3, IfIndex: 19, IP: "172.16.35.254", MAC: "fc:e3:3c:ad:0b:a1"},
+		}
+
+		res := BuildTopology(TopoInput{Devices: devs, Interfaces: ifs, Neighbors: nbs, Fdb: fdb, Arp: arp, Now: time.Now()})
+		if len(res.Links) != 2 {
+			t.Fatalf("expected 2 links (Core-Acc + Acc-Router), got %d: %+v", len(res.Links), res.Links)
+		}
+		foundAccRouter := false
+		for _, l := range res.Links {
+			if (l.ADeviceID == 1 && l.BDeviceID == 3) || (l.ADeviceID == 3 && l.BDeviceID == 1) {
+				t.Fatalf("false shortcut link between Core and Router: %+v", l)
+			}
+			if l.ADeviceID == 2 && l.BDeviceID == 3 && l.AIfName == "GE0/0/5" && l.BIfName == "Ge0/7" {
+				foundAccRouter = true
+			}
+		}
+		if !foundAccRouter {
+			t.Fatalf("expected Acc(GE0/0/5) <-> Router(Ge0/7) link, got %+v", res.Links)
+		}
+	})
+
+	t.Run("PureL3ARPFallbackWithoutFDB", func(t *testing.T) {
+		devs := []*Device{
+			{ID: 1, Name: "hx-01", Managed: true, Family: FamilySwitch, IPs: []string{"172.16.35.254"}, ChassisMAC: "fc:e3:3c:ad:0b:a1"},
+			{ID: 2, Name: "172.16.35.252", Managed: true, Family: FamilyRouter, MgmtIP: "172.16.35.252", ChassisMAC: "4c:49:68:48:20:f5"},
+		}
+		ifs := []*Interface{
+			{DeviceID: 2, IfIndex: 19, Name: "Ge0/7", IfType: 117, OperStatus: "up", MAC: "4c:49:68:48:20:fc"},
+		}
+		arp := []ArpEntry{
+			{DeviceID: 2, IfIndex: 19, IP: "172.16.35.254", MAC: "fc:e3:3c:ad:0b:a1"},
+		}
+
+		res := BuildTopology(TopoInput{Devices: devs, Interfaces: ifs, Arp: arp, Now: time.Now()})
+		if len(res.Links) != 1 || res.Links[0].Kind != "arp" || res.Links[0].BIfName != "Ge0/7" || res.Links[0].AIfName != "L3" {
+			t.Fatalf("expected L3 ARP fallback link, got %+v", res.Links)
+		}
+	})
+}

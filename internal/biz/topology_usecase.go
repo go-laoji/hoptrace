@@ -74,6 +74,10 @@ func (uc *TopologyUsecase) load(ctx context.Context, now time.Time) (*TopoInput,
 	if err != nil {
 		return nil, err
 	}
+	arpList, err := uc.endpoints.ListArp(ctx)
+	if err != nil {
+		return nil, err
+	}
 	macs, err := uc.topo.PortMACCounts(ctx)
 	if err != nil {
 		return nil, err
@@ -82,7 +86,7 @@ func (uc *TopologyUsecase) load(ctx context.Context, now time.Time) (*TopoInput,
 	if err != nil {
 		return nil, err
 	}
-	return &TopoInput{Devices: devs, Interfaces: ifs, Neighbors: nbs, Fdb: fdb, MACCounts: macs, ArpCounts: arps,
+	return &TopoInput{Devices: devs, Interfaces: ifs, Neighbors: nbs, Fdb: fdb, Arp: arpList, MACCounts: macs, ArpCounts: arps,
 		Threshold: uc.opts.SuspectMACThreshold, Now: now}, nil
 }
 

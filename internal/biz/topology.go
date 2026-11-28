@@ -75,6 +75,7 @@ type TopoInput struct {
 	Interfaces []*Interface
 	Neighbors  []*Neighbor
 	Fdb        []FdbEntry    // 用于 LLDP 缺失时的 FDB 链路推断
+	Arp        []ArpEntry    // 用于纯三层路由器/防火墙无 LLDP/FDB 时的 ARP+FDB 链路推断
 	MACCounts  map[IfKey]int // 各端口 FDB 条目数
 	ArpCounts  map[uint]int  // 各设备 ARP 条目数
 	Threshold  int           // 疑似私接 MAC 数阈值
@@ -430,40 +431,41 @@ func BuildTopology(in TopoInput) *TopoResult {
 		}
 	}
 
-	// FDB 链路推断(AFT): 当两台已纳管设备之间无 LLDP 链路时, 若 A:pA 学到 B 的 MAC 且 B:pB 学到 A 的 MAC,
-	// 且两侧端口看到的设备集合交集为空(中间无其他交换机), 则推断 A:pA <-> B:pB 直连(confidence=0.5)。
-	if len(in.Fdb) > 0 {
-		lldpPairs := map[[2]uint]bool{}
-		for _, l := range res.Links {
-			a, b := l.ADeviceID, l.BDeviceID
-			if a > b {
-				a, b = b, a
-			}
-			lldpPairs[[2]uint{a, b}] = true
+	// FDB 链路推断(AFT)与三层 ARP+FDB 混合链路推断
+	linkedPairs := map[[2]uint]bool{}
+	for _, l := range res.Links {
+		a, b := l.ADeviceID, l.BDeviceID
+		if a > b {
+			a, b = b, a
 		}
-		// portDevs[IfKey] = 该逻辑口方向学到的其他已纳管设备集合
-		portDevs := map[IfKey]map[uint]bool{}
-		for _, f := range in.Fdb {
-			src := live(devByID[f.DeviceID])
-			if src == nil || !src.Managed {
-				continue
-			}
-			dst := live(macIdx[NormalizeMAC(f.MAC)])
-			if dst == nil || !dst.Managed || dst.ID == src.ID {
-				continue
-			}
-			lIdx, _ := logicalOf(src.ID, f.IfIndex)
-			pk := IfKey{src.ID, lIdx}
-			if uplinkIf[pk] {
-				continue // 已有 LLDP 互联的端口不参与推断
-			}
-			if portDevs[pk] == nil {
-				portDevs[pk] = map[uint]bool{}
-			}
-			portDevs[pk][dst.ID] = true
-		}
+		linkedPairs[[2]uint{a, b}] = true
+	}
 
-		// 设备对 -> 候选端口对
+	// portDevs[IfKey] = 该逻辑口方向学到的其他已纳管设备集合
+	portDevs := map[IfKey]map[uint]bool{}
+	hasOwnFdb := map[uint]bool{}
+	for _, f := range in.Fdb {
+		src := live(devByID[f.DeviceID])
+		if src == nil || !src.Managed {
+			continue
+		}
+		hasOwnFdb[src.ID] = true
+		dst := live(macIdx[NormalizeMAC(f.MAC)])
+		if dst == nil || !dst.Managed || dst.ID == src.ID {
+			continue
+		}
+		lIdx, _ := logicalOf(src.ID, f.IfIndex)
+		pk := IfKey{src.ID, lIdx}
+		if uplinkIf[pk] {
+			continue // 已有 LLDP 互联的端口不参与推断
+		}
+		if portDevs[pk] == nil {
+			portDevs[pk] = map[uint]bool{}
+		}
+		portDevs[pk][dst.ID] = true
+	}
+
+	if len(portDevs) > 0 {
 		fdbKeys := make([]IfKey, 0, len(portDevs))
 		for k := range portDevs {
 			fdbKeys = append(fdbKeys, k)
@@ -475,7 +477,6 @@ func BuildTopology(in TopoInput) *TopoResult {
 			return fdbKeys[i].IfIndex < fdbKeys[j].IfIndex
 		})
 
-		inferredPairs := map[[2]uint]bool{}
 		for _, pkA := range fdbKeys {
 			devsA := portDevs[pkA]
 			for bID := range devsA {
@@ -483,7 +484,7 @@ func BuildTopology(in TopoInput) *TopoResult {
 					continue
 				}
 				pair := [2]uint{pkA.DeviceID, bID}
-				if lldpPairs[pair] || inferredPairs[pair] {
+				if linkedPairs[pair] {
 					continue
 				}
 				// 在设备 B 上寻找学到了 A 的端口
@@ -506,7 +507,7 @@ func BuildTopology(in TopoInput) *TopoResult {
 					if !disjoint {
 						continue
 					}
-					inferredPairs[pair] = true
+					linkedPairs[pair] = true
 					uplinkIf[pkA] = true
 					uplinkIf[pkB] = true
 
@@ -539,6 +540,172 @@ func BuildTopology(in TopoInput) *TopoResult {
 					})
 					break
 				}
+			}
+		}
+	}
+
+	// 三层 ARP + FDB 混合链路推断: 针对纯三层路由器/防火墙(无 LLDP 且无 FDB, 如锐捷 RG-NBR),
+	// 利用其物理口 ARP 指向的对端设备 + 对端(或中间接入交换机)未占用 FDB 端口定位物理连线。
+	if len(in.Arp) > 0 {
+		type arpEdge struct {
+			srcID    uint
+			srcIfIdx int
+			dstID    uint
+		}
+		var arpEdges []arpEdge
+		// peerArpPort[[src, dst]] = src 上指向 dst 的物理口 ifIndex
+		peerArpPort := map[[2]uint]int{}
+		seenArp := map[arpEdge]bool{}
+		for _, a := range in.Arp {
+			src := live(devByID[a.DeviceID])
+			if src == nil || !src.Managed {
+				continue
+			}
+			dst := live(ipIdx[a.IP])
+			if dst == nil {
+				dst = live(macIdx[NormalizeMAC(a.MAC)])
+			}
+			if dst == nil || !dst.Managed || dst.ID == src.ID {
+				continue
+			}
+			lIdx, lIf := logicalOf(src.ID, a.IfIndex)
+			if lIf == nil {
+				continue // 非物理/聚合口(如 Vlanif)不作为本端物理口
+			}
+			e := arpEdge{srcID: src.ID, srcIfIdx: lIdx, dstID: dst.ID}
+			if !seenArp[e] {
+				seenArp[e] = true
+				arpEdges = append(arpEdges, e)
+			}
+			if _, ok := peerArpPort[[2]uint{src.ID, dst.ID}]; !ok {
+				peerArpPort[[2]uint{src.ID, dst.ID}] = lIdx
+			}
+		}
+		sort.Slice(arpEdges, func(i, j int) bool {
+			if arpEdges[i].srcID != arpEdges[j].srcID {
+				return arpEdges[i].srcID < arpEdges[j].srcID
+			}
+			if arpEdges[i].srcIfIdx != arpEdges[j].srcIfIdx {
+				return arpEdges[i].srcIfIdx < arpEdges[j].srcIfIdx
+			}
+			return arpEdges[i].dstID < arpEdges[j].dstID
+		})
+
+		// 为任意被学到的设备建立其所在的未占用 FDB 端口列表
+		fdbPortsFor := map[uint][]IfKey{}
+		for pk, devsSeen := range portDevs {
+			if uplinkIf[pk] {
+				continue
+			}
+			for targetID := range devsSeen {
+				fdbPortsFor[targetID] = append(fdbPortsFor[targetID], pk)
+			}
+		}
+		for tid := range fdbPortsFor {
+			sort.Slice(fdbPortsFor[tid], func(i, j int) bool {
+				if fdbPortsFor[tid][i].DeviceID != fdbPortsFor[tid][j].DeviceID {
+					return fdbPortsFor[tid][i].DeviceID < fdbPortsFor[tid][j].DeviceID
+				}
+				return fdbPortsFor[tid][i].IfIndex < fdbPortsFor[tid][j].IfIndex
+			})
+		}
+
+		addArpLink := func(aDev uint, aIdx int, bDev uint, bIdx int, conf float64) {
+			pa, pb := aDev, bDev
+			if pa > pb {
+				pa, pb = pb, pa
+			}
+			if linkedPairs[[2]uint{pa, pb}] {
+				return
+			}
+			linkedPairs[[2]uint{pa, pb}] = true
+			if aIdx > 0 {
+				uplinkIf[IfKey{aDev, aIdx}] = true
+			}
+			if bIdx > 0 {
+				uplinkIf[IfKey{bDev, bIdx}] = true
+			}
+			if aDev > bDev {
+				aDev, aIdx, bDev, bIdx = bDev, bIdx, aDev, aIdx
+			}
+			ai, bi := ifByKey[IfKey{aDev, aIdx}], ifByKey[IfKey{bDev, bIdx}]
+			aName, bName := "L3", "L3"
+			if ai != nil && ai.Name != "" {
+				aName = ai.Name
+			} else if aIdx > 0 {
+				aName = strconv.Itoa(aIdx)
+			}
+			if bi != nil && bi.Name != "" {
+				bName = bi.Name
+			} else if bIdx > 0 {
+				bName = strconv.Itoa(bIdx)
+			}
+			st := LinkUp
+			if (ai != nil && ai.OperStatus == "down") || (bi != nil && bi.OperStatus == "down") {
+				st = LinkDown
+			}
+			res.Links = append(res.Links, &Link{
+				Key:        fmt.Sprintf("%d:%d|%d:%d", aDev, aIdx, bDev, bIdx),
+				ADeviceID:  aDev,
+				AIfIndex:   aIdx,
+				AIfName:    aName,
+				BDeviceID:  bDev,
+				BIfIndex:   bIdx,
+				BIfName:    bName,
+				Kind:       "arp",
+				Confidence: conf,
+				Status:     st,
+				Members:    []string{aName + " <-> " + bName},
+				FirstSeen:  in.Now,
+				LastSeen:   in.Now,
+			})
+		}
+
+		for _, e := range arpEdges {
+			srcPK := IfKey{e.srcID, e.srcIfIdx}
+			if uplinkIf[srcPK] {
+				continue
+			}
+			pa, pb := e.srcID, e.dstID
+			if pa > pb {
+				pa, pb = pb, pa
+			}
+			if linkedPairs[[2]uint{pa, pb}] {
+				continue
+			}
+
+			// 1) 优先: 对端设备 dst 有未占用 FDB 端口学到了 src 的 MAC (最精确的直连物理口)
+			matched := false
+			for _, pkB := range fdbPortsFor[e.srcID] {
+				if pkB.DeviceID == e.dstID && !uplinkIf[pkB] {
+					addArpLink(e.srcID, e.srcIfIdx, pkB.DeviceID, pkB.IfIndex, 0.6)
+					matched = true
+					break
+				}
+			}
+			if matched {
+				continue
+			}
+
+			// 2) 次选: 若 src 实际接在某台接入交换机 X 下(中间经过 X 再到三层网关 dst),
+			//    X 的未占用 FDB 端口独占学到了 src 的 MAC, 则连接到 X 而非跨跳直连 dst
+			for _, pkX := range fdbPortsFor[e.srcID] {
+				if pkX.DeviceID != e.dstID && !uplinkIf[pkX] && len(portDevs[pkX]) == 1 {
+					addArpLink(e.srcID, e.srcIfIdx, pkX.DeviceID, pkX.IfIndex, 0.55)
+					matched = true
+					break
+				}
+			}
+			if matched {
+				continue
+			}
+
+			// 3) 兜底: 对端是三层口(无 FDB 条目), 若对端也有物理口 ARP 指向 src 则双端建链;
+			//    否则对于无 FDB 的纯三层路由器/防火墙, 建立到对端设备的 L3 链路
+			if revIfIdx, ok := peerArpPort[[2]uint{e.dstID, e.srcID}]; ok && !uplinkIf[IfKey{e.dstID, revIfIdx}] {
+				addArpLink(e.srcID, e.srcIfIdx, e.dstID, revIfIdx, 0.5)
+			} else if !hasOwnFdb[e.srcID] {
+				addArpLink(e.srcID, e.srcIfIdx, e.dstID, 0, 0.4)
 			}
 		}
 	}
